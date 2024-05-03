@@ -1,5 +1,3 @@
-discord
-os
 json
 logging
 re
