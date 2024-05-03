@@ -1,0 +1,7 @@
+discord
+os
+json
+logging
+re
+requests
+pdb
