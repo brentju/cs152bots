@@ -1,0 +1,1 @@
+worker: python DiscordBot/run.py
