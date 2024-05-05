@@ -17,13 +17,17 @@ handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(me
 logger.addHandler(handler)
 
 # There should be a file called 'tokens.json' inside the same folder as this file
-token_path = 'tokens.json'
-if not os.path.isfile(token_path):
-    raise Exception(f"{token_path} not found!")
-with open(token_path) as f:
-    # If you get an error here, it means your token is formatted incorrectly. Did you put it in quotes?
-    tokens = json.load(f)
-    discord_token = tokens['discord']
+# token_path = 'tokens.json'
+# if not os.path.isfile(token_path):
+#     raise Exception(f"{token_path} not found!")
+# with open(token_path) as f:
+#     # If you get an error here, it means your token is formatted incorrectly. Did you put it in quotes?
+#     tokens = json.load(f)
+#     discord_token = tokens['discord']
+
+discord_token = os.getenv('discord')
+if not discord_token:
+    raise Exception("Discord token not found in environment variables!")
 
 
 class ModBot(discord.Client):
