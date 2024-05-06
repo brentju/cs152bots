@@ -119,13 +119,13 @@ class Report:
     """
     def add_context(self, abuse_type):
         if abuse_type == "nsfw":
-            pass
+            return "1. Nudity\n2. Violence\n3. CSAM"
         elif abuse_type == "impersonation":
-            pass
+            return "1. Propaganda/Libel\n2. Imitating Public Figures\n3. Imitating others\n 4. Fraud/Scam/Catfishing\n 5. Impersonating myself"
         elif abuse_type == "hateful content":
-            pass
+            return "1. Hateful content\n2. Targeted Harassment\n3. Inciting violence"
         elif abuse_type == "copyright infringement":
-            pass
+            return "1. Audio\n2. Video\n3. Photo"
         elif abuse_type == "other":
             self.state = State.AWAITING_ADDL_INFO
             return ""
