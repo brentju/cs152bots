@@ -9,6 +9,7 @@ class State(Enum):
     AWAITING_ABUSE_TYPE = auto()   
      
     # enums to track unified flow once specific abuse details provided
+    AWAITING_ABUSE_SUBTYPE = auto()
     AWAITING_ADDL_INFO = auto()
     REPORT_COMPLETE = auto()
     
@@ -95,12 +96,25 @@ class Report:
                 
             if abuse_type:
                 self.cur_abuse_type = abuse_type
+                self.state = State.AWAITING_ABUSE_SUBTYPE
                 reply = f"I see you have identified the message as {abuse_type}."
-                reply += "Please provide some additional context so we can better handle your report."
+                reply += "Please provide some additional context so we can better handle your report.\n"
                 reply += self.add_context(abuse_type)
                 return [reply]
             return ["Sorry, I didn't quite understand. Please try again or say `cancel` to cancel.", \
                 "1. NSFW", "2. Impersonation", "3. Hateful Content", "4. Copyright Infringement", "5. Other"]
+            
+        if self.state == State.AWAITING_ABUSE_SUBTYPE:
+            # leveraging a helper function to parse out 
+            subtypes = [subtype.lower() for subtype in self.add_context(self.cur_abuse_type).split("\n")]
+            for subtype in subtypes:
+                if message.content.lower() in subtype:
+                    return [f"You have identified your abuse subtype as {subtype}."]
+            response = "I didn't quite get that; please try again or cancel.\n"
+            response += subtypes
+            return response
+            
+            
             
         if self.state == State.AWAITING_ADDL_INFO:
             return ["TBD: But at least you got to this point!"]
@@ -115,7 +129,7 @@ class Report:
     abuse_type (str): Specified abuse type, guaranteed to be one of the below 5 types. 
     
     @returns:
-    A string containing 
+    A string containing the subcategories of each abuse type.
     """
     def add_context(self, abuse_type):
         if abuse_type == "nsfw":
