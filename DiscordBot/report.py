@@ -117,7 +117,7 @@ class Report:
     @returns:
     A string containing 
     """
-    def add_context(abuse_type):
+    def add_context(self, abuse_type):
         if abuse_type == "nsfw":
             pass
         elif abuse_type == "impersonation":
