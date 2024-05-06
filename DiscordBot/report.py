@@ -105,7 +105,7 @@ class Report:
         if self.state == State.AWAITING_ADDL_INFO:
             return ["TBD: But at least you got to this point!"]
 
-        return []
+        return ["no state detected."]
     
     """
     Provide additional context options to the message for the user,
