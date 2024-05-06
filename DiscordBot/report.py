@@ -6,7 +6,19 @@ class State(Enum):
     REPORT_START = auto()
     AWAITING_MESSAGE = auto()
     MESSAGE_IDENTIFIED = auto()
+    AWAITING_ABUSE_TYPE = auto()   
+     
+    # enums to track unified flow once specific abuse details provided
+    AWAITING_ADDL_INFO = auto()
     REPORT_COMPLETE = auto()
+    
+class AbuseType(Enum):
+    # enums for tracking which flow to take, given type of abuse
+    NSFW = auto()
+    IMPERSONATION = auto()
+    HATEFUL = auto()
+    COPYRIGHT = auto()
+    OTHER = auto()
 
 class Report:
     START_KEYWORD = "report"
@@ -17,6 +29,14 @@ class Report:
         self.state = State.REPORT_START
         self.client = client
         self.message = None
+        self.abuse_types = {
+            1: "nsfw",
+            2: "impersonation",
+            3: "hateful content",
+            4: "copyright infringement",
+            5: "other"
+        }
+        self.cur_abuse_type = None
     
     async def handle_message(self, message):
         '''
@@ -56,12 +76,60 @@ class Report:
             # Here we've found the message - it's up to you to decide what to do next!
             self.state = State.MESSAGE_IDENTIFIED
             return ["I found this message:", "```" + message.author.name + ": " + message.content + "```", \
-                    "This is all I know how to do right now - it's up to you to build out the rest of my reporting flow!"]
+                    "Would you like to report the following as:", \
+                    "1. NSFW", "2. Impersonation", "3. Hateful Content", "4. Copyright Infringement", "5. Other"]
         
         if self.state == State.MESSAGE_IDENTIFIED:
-            return ["<insert rest of reporting flow here>"]
+            # We are awaiting a reply to the above
+            abuse_type = None
+            msg_key = None
+            # attempt to parse out the type of abuse user specifies
+            try:
+                msg_key = int(message.content)
+                if int(message.content) in self.abuse_types.keys(): 
+                    abuse_type = self.abuse_types[int(message.content)]
+            except ValueError:
+                pass
+            if message.content.lower() in self.abuse_types.values():
+                abuse_type = message.content.lower()
+                
+            if abuse_type:
+                self.cur_abuse_type = abuse_type
+                reply = f"I see you have identified the message as {abuse_type}."
+                reply += "Please provide some additional context so we can better handle your report."
+                reply += self.add_context(abuse_type)
+                return [reply]
+            return ["Sorry, I didn't quite understand. Please try again or say `cancel` to cancel.", \
+                "1. NSFW", "2. Impersonation", "3. Hateful Content", "4. Copyright Infringement", "5. Other"]
+            
+        if self.state == State.AWAITING_ADDL_INFO:
+            return ["TBD: But at least you got to this point!"]
 
         return []
+    
+    """
+    Provide additional context options to the message for the user,
+    dependent on the abuse type specified.
+    
+    @params:
+    abuse_type (str): Specified abuse type, guaranteed to be one of the below 5 types. 
+    
+    @returns:
+    A string containing 
+    """
+    def add_context(abuse_type):
+        if abuse_type == "nsfw":
+            pass
+        elif abuse_type == "impersonation":
+            pass
+        elif abuse_type == "hateful content":
+            pass
+        elif abuse_type == "copyright infringement":
+            pass
+        elif abuse_type == "other":
+            self.state = State.AWAITING_ADDL_INFO
+            return ""
+            
 
     def report_complete(self):
         return self.state == State.REPORT_COMPLETE
