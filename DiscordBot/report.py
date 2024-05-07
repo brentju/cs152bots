@@ -11,6 +11,7 @@ class State(Enum):
     # enums to track unified flow once specific abuse details provided
     AWAITING_ABUSE_SUBTYPE = auto()
     AWAITING_ADDL_INFO = auto()
+    AWAITING_USER_BLOCK = auto()
     REPORT_COMPLETE = auto()
     
 class AbuseType(Enum):
@@ -38,6 +39,7 @@ class Report:
             5: "other"
         }
         self.cur_abuse_type = None
+        self.reported_user = None
     
     async def handle_message(self, message):
         '''
@@ -76,6 +78,7 @@ class Report:
 
             # Here we've found the message - it's up to you to decide what to do next!
             self.state = State.MESSAGE_IDENTIFIED
+            self.reported_user = message.author
             return ["I found this message:", "```" + message.author.name + ": " + message.content + "```", \
                     "Would you like to report the following as:", \
                     "1. NSFW", "2. Impersonation", "3. Hateful Content", "4. Copyright Infringement", "5. Other"]
@@ -97,8 +100,9 @@ class Report:
             if abuse_type:
                 self.cur_abuse_type = abuse_type
                 self.state = State.AWAITING_ABUSE_SUBTYPE
-                reply = f"I see you have identified the message as {abuse_type}."
-                reply += "Please provide some additional context so we can better handle your report.\n"
+                reply = f"I see you have identified the message as {abuse_type}.\n"
+                if self.cur_abuse_type != "other":
+                    reply += "Can you please provide some more specifics on what category of abuse this falls under?\n"
                 reply += self.add_context(abuse_type)
                 return [reply]
             return ["Sorry, I didn't quite understand. Please try again or say `cancel` to cancel.", \
@@ -109,15 +113,30 @@ class Report:
             subtypes = [subtype.lower() for subtype in self.add_context(self.cur_abuse_type).split("\n")]
             for subtype in subtypes:
                 if message.content.lower() in subtype:
-                    return [f"You have identified your abuse subtype as {subtype}."]
+                    # use string slicing to cut out list index included inside string.
+                    subtype = subtype[3:]
+                    reply = f"You have identified your abuse subtype as {subtype}."
+                    reply += "Please provide some additional context so we can better handle your report.\n"
+                    self.state = State.AWAITING_ADDL_INFO
+                    return reply
             response = "I didn't quite get that; please try again or cancel.\n"
             response += subtypes
             return response
             
-            
-            
         if self.state == State.AWAITING_ADDL_INFO:
-            return ["TBD: But at least you got to this point!"]
+            self.state = State.AWAITING_USER_BLOCK
+            return ["Thank you for your report! Would you like to block this user? (y/n)"]
+        
+        if self.state == State.AWAITING_USER_BLOCK:
+            msg = message.content.lower()
+            if msg == "y" or msg == "yes":
+                self.state = State.REPORT_COMPLETE
+                return [f"We have blocked user {self.reported_user.name}. Thank you for your report; we will review your report and take action accordingly."]
+            elif msg == "n" or msg == "no":
+                self.state = State.REPORT_COMPLETE
+                return [f"We have blocked user {self.reported_user.name}. Thank you for your report; we will review your report and take action accordingly."]
+            response = "I didn't quite get that; please either enter a y/n character, \"yes,\" or \"no.\""
+            return [response]
 
         return ["no state detected."]
     
@@ -135,14 +154,14 @@ class Report:
         if abuse_type == "nsfw":
             return "1. Nudity\n2. Violence\n3. CSAM"
         elif abuse_type == "impersonation":
-            return "1. Propaganda/Libel\n2. Imitating Public Figures\n3. Imitating others\n 4. Fraud/Scam/Catfishing\n 5. Impersonating myself"
+            return "1. Propaganda/Libel\n2. Imitating Public Figures\n3. Imitating others\n4. Fraud/Scam/Catfishing\n5. Impersonating myself"
         elif abuse_type == "hateful content":
             return "1. Hateful content\n2. Targeted Harassment\n3. Inciting violence"
         elif abuse_type == "copyright infringement":
             return "1. Audio\n2. Video\n3. Photo"
         elif abuse_type == "other":
             self.state = State.AWAITING_ADDL_INFO
-            return ""
+            return "Please provide some additional context so we can better handle your report.\n"
             
 
     def report_complete(self):
