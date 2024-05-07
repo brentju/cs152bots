@@ -40,6 +40,7 @@ class Report:
         }
         self.cur_abuse_type = None
         self.reported_user = None
+        self.user_addl_info = None
     
     async def handle_message(self, message):
         '''
@@ -125,6 +126,7 @@ class Report:
             
         if self.state == State.AWAITING_ADDL_INFO:
             self.state = State.AWAITING_USER_BLOCK
+            self.user_addl_info = message.content
             return ["Thank you for your report! Would you like to block this user? (y/n)"]
         
         if self.state == State.AWAITING_USER_BLOCK:
