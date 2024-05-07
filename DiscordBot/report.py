@@ -134,7 +134,7 @@ class Report:
                 return [f"We have blocked user {self.reported_user.name}. Thank you for your report; we will review your report and take action accordingly."]
             elif msg == "n" or msg == "no":
                 self.state = State.REPORT_COMPLETE
-                return [f"We have blocked user {self.reported_user.name}. Thank you for your report; we will review your report and take action accordingly."]
+                return [f"Thank you for your report; we will review your report and take action accordingly."]
             response = "I didn't quite get that; please either enter a y/n character, \"yes,\" or \"no.\""
             return [response]
 
