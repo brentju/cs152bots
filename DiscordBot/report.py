@@ -115,10 +115,10 @@ class Report:
                 if message.content.lower() in subtype:
                     # use string slicing to cut out list index included inside string.
                     subtype = subtype[3:]
-                    reply = f"You have identified your abuse subtype as {subtype}."
+                    reply = f"You have identified your abuse subtype as {subtype}.\n"
                     reply += "Please provide some additional context so we can better handle your report.\n"
                     self.state = State.AWAITING_ADDL_INFO
-                    return reply
+                    return [reply]
             response = "I didn't quite get that; please try again or cancel.\n"
             response += subtypes
             return response
