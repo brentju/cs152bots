@@ -171,7 +171,15 @@ class Report:
     def report_complete(self):
         return self.state == State.REPORT_COMPLETE
     
-
+    def get_full_report(self):
+        return {
+            "client": self.client,
+            "message": self.message,
+            "abuse_type": self.cur_abuse_type,
+            "reported_user": self.reported_user,
+            "additional_info": self.user_addl_info,
+            "guild_id": self.guild_id
+        }
 
     
 
