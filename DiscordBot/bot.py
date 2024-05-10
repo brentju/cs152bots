@@ -70,8 +70,7 @@ class ModBot(discord.Client):
 
         # Check if this message was sent in a server ("guild") or if it's a DM
         if message.guild:
-            # \
-            return
+            await self.handle_channel_message(message)
         else:
             await self.handle_dm(message)
 
@@ -101,26 +100,27 @@ class ModBot(discord.Client):
 
         # If the report is complete or cancelled, remove it from our map
         if self.reports[author_id].report_complete():
-            if self.reports[message.author.id].report_complete():
-                    guild_id = self.reports[message.author.id].guild_id  
-                    if guild_id:
-                        mod_channel= self.mod_channels[guild_id]
-                        if mod_channel:
-                            full_report = self.reports[message.author.id].get_full_report()
-                            report_summary = f"Full report for {message.author.display_name}:\n{full_report}"
-                            await mod_channel.send(report_summary)
-                    self.reports.pop(message.author.id)
+                guild_id = self.reports[author_id].guild_id
+                if guild_id:
+                    mod_channel= self.mod_channels[guild_id]
+                    if mod_channel:
+                        full_report = self.reports[author_id].get_full_report()
+                        report_summary = f"Full report for {message.author.display_name}:\n{full_report}"
+                        await mod_channel.send(report_summary)
+                self.reports.pop(message.author.id)
 
-    # async def handle_channel_message(self, message):
-    #     # Only handle messages sent in the "group-#" channel
-    #     if not message.channel.name == f'group-{self.group_num}':
-    #         return
-    #
-    #     # Forward the message to the mod channel
-    #     mod_channel = self.mod_channels[message.guild.id]
-    #     await mod_channel.send(f'Forwarded message:\n{message.author.name}: "{message.content}"')
-    #     scores = self.eval_text(message.content)
-    #     await mod_channel.send(self.code_format(scores))
+    async def handle_channel_message(self, message):
+        # Only handle messages sent in the "group-#" channel
+        if not message.channel.name == f'group-{self.group_num}':
+            return
+
+        # Forward the message to the mod channel
+        mod_channel = self.mod_channels[message.guild.id]
+        print(f'Guild ID is {message.guild.id}')
+        print(f'Mod channel is {mod_channel}')
+        await mod_channel.send(f'Forwarded message:\n{message.author.name}: "{message.content}"')
+        scores = self.eval_text(message.content)
+        await mod_channel.send(self.code_format(scores))
 
     
     def eval_text(self, message):
