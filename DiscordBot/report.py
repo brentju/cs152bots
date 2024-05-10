@@ -59,7 +59,7 @@ class Report:
         if self.state == State.REPORT_START:
             reply =  "Thank you for starting the reporting process. "
             reply += "Say `help` at any time for more information.\n\n"
-            reply += f"For all further steps of the reporting process, please preface your message with the following message: \n REPORT ID: {self.report_id}"
+            reply += f"For all further steps of the reporting process, please preface your message with the following message: \n REPORT ID: {self.report_id}\n"
             reply += "Please copy paste the link to the message you want to report.\n"
             reply += "You can obtain this link by right-clicking the message and clicking `Copy Message Link`."
             self.state = State.AWAITING_MESSAGE
