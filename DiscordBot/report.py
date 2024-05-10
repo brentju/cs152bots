@@ -27,7 +27,7 @@ class Report:
     CANCEL_KEYWORD = "cancel"
     HELP_KEYWORD = "help"
 
-    def __init__(self, client):
+    def __init__(self, client, report_id):
         self.state = State.REPORT_START
         self.client = client
         self.message = None
@@ -43,6 +43,7 @@ class Report:
         self.reported_by = None
         self.user_addl_info = None
         self.guild_id = None
+        self.report_id = report_id
     
     async def handle_message(self, message):
         '''
@@ -58,6 +59,7 @@ class Report:
         if self.state == State.REPORT_START:
             reply =  "Thank you for starting the reporting process. "
             reply += "Say `help` at any time for more information.\n\n"
+            reply += f"For all further steps of the reporting process, please preface your message with the following message: \n REPORT ID: {self.report_id}"
             reply += "Please copy paste the link to the message you want to report.\n"
             reply += "You can obtain this link by right-clicking the message and clicking `Copy Message Link`."
             self.state = State.AWAITING_MESSAGE

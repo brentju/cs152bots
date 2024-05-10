@@ -9,7 +9,7 @@ import requests
 from report import Report
 import pdb
 from moderate import Moderate
-from util import parse_report_details
+from util import parse_report_details, extract_report_id
 import uuid
 
 
@@ -98,11 +98,13 @@ class ModBot(discord.Client):
         # If we don't currently have an active report for this user, add one
         if author_id not in self.reports:
             self.reports[author_id] = {}
-        if message.id not in self.reports[author_id]:
-            self.reports[author_id][message.id] = Report(self)
+        report_id = extract_report_id(message.content)
+        if not report_id:
+            report_id = uuid.uuid4()
+            self.reports[author_id][report_id] = Report(self, report_id=report_id)
 
         # Let the report class handle this message; forward all the messages it returns to us
-        responses = await self.reports[author_id][message.id].handle_message(message)
+        responses = await self.reports[author_id][report_id].handle_message(message)
         for r in responses:
             await message.channel.send(r)
 
@@ -110,14 +112,13 @@ class ModBot(discord.Client):
         if self.reports[author_id][message.id].report_complete():
             our_guild_id = 1211760623969370122
             our_mod_channel = self.mod_channels[our_guild_id]
-            full_report = self.reports[author_id][message.id].get_full_report()
+            full_report = self.reports[author_id][report_id].get_full_report()
             report_summary = f"Full report for {message.author.display_name}:\n\
             Reported User: {full_report['reported_user'].name} \n\
             Message: {full_report['message']}\n\
             Abuse Type: {full_report['abuse_type']}\n\
             Additional Info: {full_report['additional_info']}\n\
-            Reporting User: {author_id}\n\
-            Report ID: {full_report['id']}"
+            Reporting User: {author_id}"
             await our_mod_channel.send(report_summary)
 
     async def handle_channel_message(self, message):
@@ -141,7 +142,7 @@ class ModBot(discord.Client):
             parent_message = await message.channel.parent.fetch_message(message.reference.message_id)
             report_id, reporting_user_id = parse_report_details(parent_message)
             report = self.reports[reporting_user_id]
-            self.active_threads[message.channel.id] = Moderate(
+            self.active_threads[message.author.id] = Moderate(
                 client=self,
                 channel=message.channel,
                 reported_user=report.reported_user,
@@ -157,7 +158,7 @@ class ModBot(discord.Client):
 
         if moderation.state == State.REPORT_COMPLETE:
             await moderation.notify_users()
-            del self.active_threads[message.channel.id]
+            del self.active_threads[message.author.id]
 
     def eval_text(self, message):
         ''''
