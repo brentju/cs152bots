@@ -180,7 +180,6 @@ class Report:
             "abuse_type": self.cur_abuse_type,
             "reported_user": self.reported_user,
             "additional_info": self.user_addl_info,
-            "id": self.report_id
         }
 
     
