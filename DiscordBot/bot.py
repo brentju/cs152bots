@@ -98,7 +98,7 @@ class ModBot(discord.Client):
         # If we don't currently have an active report for this user, add one
         if author_id not in self.reports:
             self.reports[author_id] = {}
-        if message.id not in self.reports[author.id]:
+        if message.id not in self.reports[author_id]:
             self.reports[author_id][message.id] = Report(self)
 
         # Let the report class handle this message; forward all the messages it returns to us
