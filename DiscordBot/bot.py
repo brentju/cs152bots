@@ -103,8 +103,7 @@ class ModBot(discord.Client):
         if self.reports[author_id].report_complete():
             if self.reports[message.author.id].report_complete():
                     guild_id = self.reports[message.author.id].guild_id  
-                    guild = self.client.get_guild(guild_id)
-                    if guild:
+                    if guild_id:
                         mod_channel= self.mod_channels[guild_id]
                         if mod_channel:
                             full_report = self.reports[message.author.id].get_full_report()
