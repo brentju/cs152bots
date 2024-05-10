@@ -13,7 +13,7 @@ def parse_report_details(message_content):
     return report_id, reporting_user_id
 
 def extract_report_id(message_content):
-    match = re.search(r"Report ID: (\S+)", message_content)
+    match = re.search(r"REPORT ID: (\S+)", message_content)
     if match:
         return match.group(1)
     return None
