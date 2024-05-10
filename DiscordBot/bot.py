@@ -99,7 +99,7 @@ class ModBot(discord.Client):
         if author_id not in self.reports:
             self.reports[author_id] = {}
         report_id = uuid.uuid4()
-        self.reports[author_id][report_id] = Report(report_id)
+        self.reports[author_id][report_id] = Report(self, id=report_id)
 
         # Let the report class handle this message; forward all the messages it returns to us
         responses = await self.reports[author_id].handle_message(message)
