@@ -8,6 +8,10 @@ import re
 import requests
 from report import Report
 import pdb
+from moderate import Moderate
+from util import parse_report_details
+import uuid
+
 
 # Set up logging to the console
 logger = logging.getLogger('discord')
@@ -38,6 +42,7 @@ class ModBot(discord.Client):
         self.group_num = None
         self.mod_channels = {} # Map from guild to the mod channel id for that guild
         self.reports = {} # Map from user IDs to the state of their report
+        self.active_threads = {} # Threads currently in moderation
 
     async def on_ready(self):
         print(f'{self.user.name} has connected to Discord! It is these guilds:')
@@ -68,8 +73,9 @@ class ModBot(discord.Client):
         if message.author.id == self.user.id:
             return
 
-        # Check if this message was sent in a server ("guild") or if it's a DM
-        if message.guild:
+        if isinstance(message.channel, discord.Thread):
+            await self.handle_thread_message(message)
+        elif message.guild:
             await self.handle_channel_message(message)
         else:
             await self.handle_dm(message)
@@ -91,7 +97,9 @@ class ModBot(discord.Client):
 
         # If we don't currently have an active report for this user, add one
         if author_id not in self.reports:
-            self.reports[author_id] = Report(self)
+            self.reports[author_id] = {}
+        report_id = uuid.uuid4()
+        self.reports[author_id][report_id] = Report(report_id)
 
         # Let the report class handle this message; forward all the messages it returns to us
         responses = await self.reports[author_id].handle_message(message)
@@ -103,9 +111,14 @@ class ModBot(discord.Client):
             our_guild_id = 1211760623969370122
             our_mod_channel = self.mod_channels[our_guild_id]
             full_report = self.reports[author_id].get_full_report()
-            report_summary = f"Full report for {message.author.display_name}:\n{full_report}"
+            report_summary = f"Full report for {message.author.display_name}:\n\
+            Reported User: {full_report['reported_user'].name} \n\
+            Message: {full_report['message']}\n\
+            Abuse Type: {full_report['abuse_type']}\n\
+            Additional Info: {full_report['additional_info']}\n\
+            Reporting User: {author_id}\n\
+            Report ID: {full_report['id']}"
             await our_mod_channel.send(report_summary)
-            self.reports.pop(message.author.id)
 
     async def handle_channel_message(self, message):
         # Only handle messages sent in the "group-#" channel
@@ -121,7 +134,31 @@ class ModBot(discord.Client):
         # scores = self.eval_text(message.content)
         # await mod_channel.send(self.code_format(scores))
 
-    
+    async def handle_thread_message(self, message):
+        if not message.content.startswith(Moderate.START_KEYWORD):
+            return
+        if message.author.id not in self.active_threads:
+            parent_message = await message.channel.parent.fetch_message(message.reference.message_id)
+            report_id, reporting_user_id = parse_report_details(parent_message)
+            report = self.reports[reporting_user_id]
+            self.active_threads[message.channel.id] = Moderate(
+                client=self,
+                channel=message.channel,
+                reported_user=report.reported_user,
+                reporting_user=report.reporting_user,
+                initial_message=report.message
+            )
+
+        moderation = self.active_threads[message.author.id]
+        responses = await moderation.handle_message(message)
+
+        for response in responses:
+            await message.channel.send(response)
+
+        if moderation.state == State.REPORT_COMPLETE:
+            await moderation.notify_users()
+            del self.active_threads[message.channel.id]
+
     def eval_text(self, message):
         ''''
         TODO: Once you know how you want to evaluate messages in your channel, 

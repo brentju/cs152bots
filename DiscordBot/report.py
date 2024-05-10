@@ -27,7 +27,7 @@ class Report:
     CANCEL_KEYWORD = "cancel"
     HELP_KEYWORD = "help"
 
-    def __init__(self, client):
+    def __init__(self, client, id):
         self.state = State.REPORT_START
         self.client = client
         self.message = None
@@ -40,8 +40,10 @@ class Report:
         }
         self.cur_abuse_type = None
         self.reported_user = None
+        self.reported_by = None
         self.user_addl_info = None
         self.guild_id = None
+        self.report_id = id
     
     async def handle_message(self, message):
         '''
@@ -85,7 +87,7 @@ class Report:
             return ["I found this message:", "```" + message.author.name + ": " + message.content + "```", \
                     "Would you like to report the following as:", \
                     "1. NSFW", "2. Impersonation", "3. Hateful Content", "4. Copyright Infringement", "5. Other"]
-        
+            self.message = message.content
         if self.state == State.MESSAGE_IDENTIFIED:
             # We are awaiting a reply to the above
             abuse_type = None
@@ -173,12 +175,11 @@ class Report:
     
     def get_full_report(self):
         return {
-            "client": self.client,
             "message": self.message,
             "abuse_type": self.cur_abuse_type,
             "reported_user": self.reported_user,
             "additional_info": self.user_addl_info,
-            "guild_id": self.guild_id
+            "id": self.report_id
         }
 
     
