@@ -102,15 +102,15 @@ class ModBot(discord.Client):
         self.reports[author_id][report_id] = Report(self, id=report_id)
 
         # Let the report class handle this message; forward all the messages it returns to us
-        responses = await self.reports[author_id].handle_message(message)
+        responses = await self.reports[author_id][report_id].handle_message(message)
         for r in responses:
             await message.channel.send(r)
 
         # If the report is complete or cancelled, remove it from our map
-        if self.reports[author_id].report_complete():
+        if self.reports[author_id][report_id].report_complete():
             our_guild_id = 1211760623969370122
             our_mod_channel = self.mod_channels[our_guild_id]
-            full_report = self.reports[author_id].get_full_report()
+            full_report = self.reports[author_id][report_id].get_full_report()
             report_summary = f"Full report for {message.author.display_name}:\n\
             Reported User: {full_report['reported_user'].name} \n\
             Message: {full_report['message']}\n\
