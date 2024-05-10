@@ -100,7 +100,7 @@ class ModBot(discord.Client):
 
         # If the report is complete or cancelled, remove it from our map
         if self.reports[author_id].report_complete():
-            our_guild_id = '1211760623969370122'
+            our_guild_id = 1211760623969370122
             our_mod_channel = self.mod_channels[our_guild_id]
             full_report = self.reports[author_id].get_full_report()
             report_summary = f"Full report for {message.author.display_name}:\n{full_report}"
