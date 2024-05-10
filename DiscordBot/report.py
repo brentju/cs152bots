@@ -27,7 +27,7 @@ class Report:
     CANCEL_KEYWORD = "cancel"
     HELP_KEYWORD = "help"
 
-    def __init__(self, client, id):
+    def __init__(self, client):
         self.state = State.REPORT_START
         self.client = client
         self.message = None
@@ -43,7 +43,6 @@ class Report:
         self.reported_by = None
         self.user_addl_info = None
         self.guild_id = None
-        self.report_id = id
     
     async def handle_message(self, message):
         '''

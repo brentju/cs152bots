@@ -98,11 +98,11 @@ class ModBot(discord.Client):
         # If we don't currently have an active report for this user, add one
         if author_id not in self.reports:
             self.reports[author_id] = {}
-        report_id = uuid.uuid4()
-        self.reports[author_id][report_id] = Report(self, id=report_id)
+        if message.id not in self.reports[author.id]:
+            self.reports[author_id][message.id] = Report(self)
 
         # Let the report class handle this message; forward all the messages it returns to us
-        responses = await self.reports[author_id][report_id].handle_message(message)
+        responses = await self.reports[author_id][message.id].handle_message(message)
         for r in responses:
             await message.channel.send(r)
 
