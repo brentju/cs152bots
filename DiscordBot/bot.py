@@ -70,7 +70,8 @@ class ModBot(discord.Client):
 
         # Check if this message was sent in a server ("guild") or if it's a DM
         if message.guild:
-            await self.handle_channel_message(message)
+            # \
+            return
         else:
             await self.handle_dm(message)
 
@@ -100,10 +101,16 @@ class ModBot(discord.Client):
 
         # If the report is complete or cancelled, remove it from our map
         if self.reports[author_id].report_complete():
-            mod_channel = self.mod_channels[message.guild.id]
-            full_report = self.reports[author_id].get_full_report()
-            await mod_channel.send(f"Full report for {message.author.display_name}:\n{full_report}")
-            self.reports.pop(author_id)
+            if self.reports[message.author.id].report_complete():
+                    guild_id = self.reports[message.author.id].guild_id  
+                    guild = self.client.get_guild(guild_id)
+                    if guild:
+                        mod_channel= self.mod_channels[guild_id]
+                        if mod_channel:
+                            full_report = self.reports[message.author.id].get_full_report()
+                            report_summary = f"Full report for {message.author.display_name}:\n{full_report}"
+                            await mod_channel.send(report_summary)
+                    self.reports.pop(message.author.id)
 
     # async def handle_channel_message(self, message):
     #     # Only handle messages sent in the "group-#" channel

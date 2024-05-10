@@ -41,6 +41,7 @@ class Report:
         self.cur_abuse_type = None
         self.reported_user = None
         self.user_addl_info = None
+        self.guild_id = None
     
     async def handle_message(self, message):
         '''
@@ -69,6 +70,7 @@ class Report:
             guild = self.client.get_guild(int(m.group(1)))
             if not guild:
                 return ["I cannot accept reports of messages from guilds that I'm not in. Please have the guild owner add me to the guild and try again."]
+            self.guild_id = guild
             channel = guild.get_channel(int(m.group(2)))
             if not channel:
                 return ["It seems this channel was deleted or never existed. Please try again or say `cancel` to cancel."]
