@@ -148,11 +148,9 @@ class ModBot(discord.Client):
             return
 
         try:
-            async for first_message in message.channel.history(oldest_first=True, limit=1):
-                reference_report = first_message.content
+            async for first_message in message.channel.history(oldest_first=True, limit=5):
                 print(first_message)
                 print(first_message.content)
-                break
             else:
                 print("No messages found in the channel.")
                 reference_report = None
