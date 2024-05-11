@@ -169,6 +169,7 @@ class ModBot(discord.Client):
             await message.channel.send(r)
 
         if self.active_replies[author_id][reference_report_id].report_complete():
+            moderation = self.active_replies[author_id][reference_report_id]
             await moderation.notify_users()
             del self.active_replies[message.author.id][reference_report_id]
 

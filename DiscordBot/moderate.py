@@ -62,7 +62,7 @@ class Moderate:
             else:
                 self.decision = "remove"
             self.state = State.AWAITING_REASON
-            reply = f"You have chosen to {self.action} this post."
+            reply = f"You have chosen to {self.decision} this post."
             reply += "Please provide a reason for why, as well as a reference to our TOS."
             return [reply]
         if self.state == State.AWAITING_REASON:
@@ -75,13 +75,8 @@ class Moderate:
                 reply+= "Please provide the action you wish to take regarding the post and/or it's owner."
                 self.state = State.AWAITING_ACTION
                 reply += """ Your choices are as follows:
-                1. Remove the post
-                2. Shadow ban the user
-                3. Prevent the user from posting for 24h
-                4. Suspend the user for a week
-                5. Ban the account
-                6. Ban the user
-                7. Report the user to authorities"""
+                1. Remove the post\n2. Shadow ban the user\n3. Prevent the user from posting for 24h\n4. Suspend the user for a week\n\
+                5. Ban the account\n6. Ban the user\n7. Report the user to authorities"""
                 reply += "Please respond with the corresponding number."
             return [reply]
         if self.state == State.AWAITING_ACTION:
