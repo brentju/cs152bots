@@ -62,17 +62,17 @@ class Moderate:
             else:
                 self.decision = "remove"
             self.state = State.AWAITING_REASON
-            reply += f"You have chosen to {self.action} this post."
+            reply = f"You have chosen to {self.action} this post."
             reply += "Please provide a reason for why, as well as a reference to our TOS."
             return [reply]
         if self.state == State.AWAITING_REASON:
             self.reason = message.content
-            reply += "Thank you."
+            reply = "Thank you."
             if self.decision == "not_remove":
                 self.state = State.REPORT_COMPLETE
                 reply += "Your report is complete."
             else:
-                reply += "Please provide the action you wish to take regarding the post and/or it's owner."
+                reply+= "Please provide the action you wish to take regarding the post and/or it's owner."
                 self.state = State.AWAITING_ACTION
                 reply += """ Your choices are as follows:
                 1. Remove the post
@@ -87,6 +87,7 @@ class Moderate:
         if self.state == State.AWAITING_ACTION:
             m = int(message.content.strip().lower())
             self.state = State.REPORT_COMPLETE
+            reply = "Report complete."
             if m == 1:
                 self.action = "Remove post"
             elif m == 2:
@@ -102,7 +103,7 @@ class Moderate:
             elif m == 7:
                 self.action = "Report to authorities"
             else:
-                reply += "Could not parse your response. Please try again."
+                reply = "Could not parse your response. Please try again."
                 self.state = State.AWAITING_ACTION
             return [reply]
 
