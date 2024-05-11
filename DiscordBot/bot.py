@@ -165,7 +165,7 @@ class ModBot(discord.Client):
         print(f"Author: {message.author}")
         print(f"Active replies for this author are: {self.active_replies[message.author.id]}")
         responses = await self.active_replies[message.author.id][reference_report_id].handle_message(message)
-        print(reponses)
+        print(responses)
         for r in responses:
             await message.channel.send(r)
 
