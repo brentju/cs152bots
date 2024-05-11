@@ -120,11 +120,9 @@ class ModBot(discord.Client):
 
     async def handle_channel_message(self, message):
         # Only handle messages sent in the "group-#" channel
+        print(message)
         if message.channel.name == f'group-{self.group_num}-mod':
-            print(message)
-            if message.thread:
-                print(message.thread)
-
+            return
                    # await self.handle_reply_message(message)
         else:
             return
