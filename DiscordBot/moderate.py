@@ -26,7 +26,7 @@ class Moderate:
     END_KEYWORD = "END"
     HELP_KEYWORD = "HELP"
 
-    def __init__(self, client, channel, reporting_user, reported_user, initial_message, abuse_type):
+    def __init__(self, client, reporting_user, reported_user, initial_message, abuse_type):
         self.state = State.REPORT_START
         self.client = client
         self.decision = None
