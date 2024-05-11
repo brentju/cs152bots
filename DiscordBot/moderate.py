@@ -50,47 +50,62 @@ class Moderate:
         
         if self.state == State.REPORT_START:
             reply =  "Starting the moderation process. "
-            reply += "Please provide whether or not you believe this message should be removed."
+            reply += "Please provide whether or not you believe this message should be removed (y/n)"
             self.state = State.AWAITING_DECISION
             return [reply]
         
         if self.state == State.AWAITING_DECISION:
             # Parse out the three ID strings from the message link
             m = message.content.strip().lower()
-            if m == "yes":
-                return
+            if m == "n" or m == "no":
+                self.decision = "not remove"
             else:
-                self.state = State.DECISION_MADE
-        if self.state == State.DECISION_MADE:
-            pass
+                self.decision = "remove"
+            self.state = State.AWAITING_REASON
+            reply += f"You have chosen to {self.action} this post."
+            reply += "Please provide a reason for why, as well as a reference to our TOS."
+            return [reply]
         if self.state == State.AWAITING_REASON:
-            pass
+            self.reason = message.content
+            reply += "Thank you."
+            if self.decision == "not_remove":
+                self.state = State.REPORT_COMPLETE
+                reply += "Your report is complete."
+            else:
+                reply += "Please provide the action you wish to take regarding the post and/or it's owner."
+                self.state = State.AWAITING_ACTION
+                reply += """ Your choices are as follows:
+                1. Remove the post
+                2. Shadow ban the user
+                3. Prevent the user from posting for 24h
+                4. Suspend the user for a week
+                5. Ban the account
+                6. Ban the user
+                7. Report the user to authorities"""
+                reply += "Please respond with the corresponding number."
+            return [reply]
         if self.state == State.AWAITING_ACTION:
-            pass
-
-    """
-    Provide additional context options to the message for the user,
-    dependent on the abuse type specified.
-
-    @params:
-    abuse_type (str): Specified abuse type, guaranteed to be one of the below 5 types.
-
-    @returns:
-    A string containing the subcategories of each abuse type.
-    """
-    def add_context(self, abuse_type):
-        if abuse_type == "nsfw":
-            return "1. Nudity\n2. Violence\n3. CSAM"
-        elif abuse_type == "impersonation":
-            return "1. Propaganda/Libel\n2. Imitating Public Figures\n3. Imitating others\n4. Fraud/Scam/Catfishing\n5. Impersonating myself"
-        elif abuse_type == "hateful content":
-            return "1. Hateful content\n2. Targeted Harassment\n3. Inciting violence"
-        elif abuse_type == "copyright infringement":
-            return "1. Audio\n2. Video\n3. Photo"
-        elif abuse_type == "other":
-            self.state = State.AWAITING_ADDL_INFO
-            return "Please provide some additional context so we can better handle your report.\n"
-
+            m = int(message.content.strip().lower())
+            self.state = State.REPORT_COMPLETE
+            if m == 1:
+                self.action = "Remove post"
+                
+            elif m == 2:
+                self.action = "Shadow ban"
+            elif m == 3:
+                self.action = "24hr timeout"
+            elif m == 4:
+                self.action = "Suspension for a week"
+            elif m == 5:
+                self.action = "Ban account"
+            elif m == 6:
+                self.action = "Ban user"
+            elif m == 7:
+                self.action = "Report to authorities"
+            else:
+                reply += "Could not parse your response. Please try again."
+                self.state = State.AWAITING_ACTION
+            return [reply]
 
     def report_complete(self):
         return self.state == State.REPORT_COMPLETE

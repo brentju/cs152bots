@@ -149,7 +149,6 @@ class ModBot(discord.Client):
 
 
         first_message = [message async for message in message.channel.history(limit=1, oldest_first=True)][0]
-        print(first_message)
         reference_report = first_message
         reference_report_id = extract_report_id(reference_report.content)
         reported_user, original_message, abuse_type, reporting_user = parse_report_details(reference_report.content)
