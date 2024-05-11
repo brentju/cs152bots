@@ -32,7 +32,7 @@ class Moderate:
         self.decision = None
         self.reason = None
         self.action = None
-        self.perp_message = inital_message
+        self.perp_message = initial_message
         self.reporting_user = reporting_user
         self.reported_user = reported_user
         self.abuse_type = abuse_type
