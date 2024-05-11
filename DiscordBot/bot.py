@@ -148,12 +148,14 @@ class ModBot(discord.Client):
         if author_id not in self.reports and not message.content.startswith(Moderate.START_KEYWORD):
             return
 
+        thread = message.channel
+        starter_message = await thread.parent.fetch_message(thread.id)
+        print(starter_message.content)
+        # first_message = [message async for message in message.channel.history(limit=1, oldest_first=True)][0]
+        # reference_report = first_message
+        # print(reference_report.content)
+        # reference_report_id = extract_report_id(reference_report.content)
 
-        first_message = [message async for message in message.channel.history(limit=1, oldest_first=True)][0]
-        reference_report = first_message
-        print(reference_report.content)
-        reference_report_id = extract_report_id(reference_report.content)
-        print(reference_report_id)
         reported_user, original_message, abuse_type, reporting_user = parse_report_details(reference_report.content)
         if message.author.id not in self.active_replies:
             self.active_replies[message.author.id] = {}
