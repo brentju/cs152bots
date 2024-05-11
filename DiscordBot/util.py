@@ -1,11 +1,11 @@
 import re 
 def parse_report_details(message_content):
-    pattern = re.compile(r"Reported User: (\d+)\nMessage: ([^\n]+)\nAbuse Type: ([^\n]+)\nAdditional Info: ([^\n]+)\nReporting User: (\d+)\nREPORT ID: ([^\n]+)", re.DOTALL)
+    pattern = re.compile(r"Reported User: (\d+)\nMessage: ([^\n]+)\nAbuse Type: ([^\n]+)\nReporting User: (\d+)\nREPORT ID: ([^\n]+)", re.DOTALL)
     match = pattern.search(message_content)
     
     if not match:
         print("No match found")
-        return None, None, None, None, None, None
+        return None, None, None, None, None,
 
     reported_user_id = match.group(1)
     message = match.group(2)
@@ -13,7 +13,7 @@ def parse_report_details(message_content):
     additional_info = match.group(4)
     reporting_user_id = match.group(5)
     report_id = match.group(6)
-    return int(reported_user_id), message, abuse_type, additional_info, int(reporting_user_id), report_id
+    return int(reported_user_id), message, abuse_type, int(reporting_user_id), report_id
 
 
 def extract_report_id(message_content):
