@@ -1,7 +1,7 @@
 from enum import Enum, auto
 import discord
 import re
-from util import remove_report_id
+from util import extract_report_id, remove_report_id
 
 class State(Enum):
     REPORT_START = auto()
