@@ -147,7 +147,7 @@ class ModBot(discord.Client):
         if author_id not in self.reports and not message.content.startswith(Moderate.START_KEYWORD):
             return
 
-        first_message = await message.channel.history(oldest_first=True, limit=1).flatten()
+        first_message = await message.channel.history(oldest_first=True, limit=1)
         if first_message:
             first_message = first_message[0]
             print(first_message)
