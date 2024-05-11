@@ -121,6 +121,7 @@ class ModBot(discord.Client):
     async def handle_channel_message(self, message):
         # Only handle messages sent in the "group-#" channel
         if isinstance(message.channel, discord.Thread) and message.channel.parent.name == f'group-{self.group_num}-mod':
+            print(message.content)
             await self.handle_reply_message(message)
         else:
             return
@@ -151,6 +152,7 @@ class ModBot(discord.Client):
         first_message = [message async for message in message.channel.history(limit=1, oldest_first=True)][0]
         reference_report = first_message
         reference_report_id = extract_report_id(reference_report.content)
+        print(reference_report_id)
         reported_user, original_message, abuse_type, reporting_user = parse_report_details(reference_report.content)
         if message.author.id not in self.active_replies:
             self.active_replies[message.author.id] = {}
@@ -160,8 +162,10 @@ class ModBot(discord.Client):
                                                               initial_message=original_message,
                                                               abuse_type=abuse_type,
                                                               reported_user=reported_user)
-
+        print(f"Author: {message.author}")
+        print(f"Active replies for this author are: {self.active_replies[message.author.id]}")
         responses = await self.active_replies[message.author.id][reference_report_id].handle_message(message)
+        print(reponses)
         for r in responses:
             await message.channel.send(r)
 

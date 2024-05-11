@@ -89,7 +89,6 @@ class Moderate:
             self.state = State.REPORT_COMPLETE
             if m == 1:
                 self.action = "Remove post"
-                
             elif m == 2:
                 self.action = "Shadow ban"
             elif m == 3:
