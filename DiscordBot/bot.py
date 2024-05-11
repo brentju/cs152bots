@@ -148,15 +148,16 @@ class ModBot(discord.Client):
             return
 
         try:
-            async for first_message in message.channel.history(oldest_first=True, limit=5):
-                print(first_message)
-                print(first_message.content)
+            async for first_message in message.channel.history(oldest_first=True, limit=1):
+                first_message_id = first_message.id
             else:
                 print("No messages found in the channel.")
-                reference_report = None
         except Exception as e:
             print(f"Error fetching message: {str(e)}")
-            reference_report = None
+
+        mod_channel = self.mod_channels[1211760623969370122]
+        reference_report = await mod_channel.fetch_message(first_message_id)
+        print(reference_report.content)
         reference_report_id = extract_report_id(reference_report.content)
         reported_user, original_message, abuse_type, reporting_user = parse_report_details(reference_report.content)
         if message.author.id not in self.active_replies:
