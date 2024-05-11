@@ -157,6 +157,7 @@ class ModBot(discord.Client):
         except Exception as e:
             print(f"Error fetching message: {str(e)}")
             reference_report = None
+        print(reference_report)
         reference_report_id = extract_report_id(reference_report.content)
         reported_user, original_message, abuse_type, reporting_user = parse_report_details(reference_report.content)
         if message.author.id not in self.active_replies:
