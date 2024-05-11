@@ -116,9 +116,6 @@ class ModBot(discord.Client):
             Reporting User: {author_id}\n\
             REPORT ID: {report_id}"
             self.reports.pop(author_id)
-            if author_id not in self.queued_reports:
-                self.queued_reports[author_id] = {}
-            self.queued_reports[author_id][report_id] = report_summary
             await our_mod_channel.send(report_summary)
 
     async def handle_channel_message(self, message):
