@@ -154,8 +154,8 @@ class ModBot(discord.Client):
             return
 
         reference_report =  await message.channel.fetch_message(message.reference.message_id)
-        reference_report_id = extract_report_id(reference_report)
-        reported_user, message, abuse_type, reporting_user = parse_report_details(reference_report)
+        reference_report_id = extract_report_id(reference_report.content)
+        reported_user, message, abuse_type, reporting_user = parse_report_details(reference_report.content)
         if message.author.id not in self.active_replies:
             self.active_replies[message.author.id] = {}
         if reference_report_id not in self.active_replies[message.author.id]:
