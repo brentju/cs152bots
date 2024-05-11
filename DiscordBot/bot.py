@@ -145,11 +145,10 @@ class ModBot(discord.Client):
         author_id = message.author.id
         responses = []
 
-        if author_id not in self.reports and not message.content.startswith(Moderate.START_KEYWORD):
+        if author_id not in self.active_replies and not message.content.startswith(Moderate.START_KEYWORD):
             return
 
         thread = message.channel
-        print(thread.id)
         starter_message = await thread.parent.fetch_message(thread.id)
         reference_report = starter_message
         reference_report_id = extract_report_id(reference_report.content)
