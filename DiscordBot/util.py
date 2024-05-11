@@ -5,7 +5,7 @@ def parse_report_details(message_content):
     
     if not match:
         print("No match found")
-        return None, None, None, None, None,
+        return None, None, None, None, None
 
     reported_user_id = match.group(1)
     message = match.group(2)
