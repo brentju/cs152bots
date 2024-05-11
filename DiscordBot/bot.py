@@ -73,9 +73,7 @@ class ModBot(discord.Client):
         if message.author.id == self.user.id:
             return
 
-        if (message.reference is not None and not message.is_system):
-            await self.handle_reply_message(message)
-        elif message.guild:
+        if message.guild:
             await self.handle_channel_message(message)
         else:
             await self.handle_dm(message)
@@ -125,10 +123,13 @@ class ModBot(discord.Client):
 
     async def handle_channel_message(self, message):
         # Only handle messages sent in the "group-#" channel
-        return
-        # if not message.channel.name == f'group-{self.group_num}':
-        #     return
-        #
+
+        if message.channel.name == f'group-{self.group_num}-mod':
+            print(message)
+            if (message.reference is not None and not message.is_system):
+                await self.handle_reply_message(message)
+        else:
+            return
         # # Forward the message to the mod channel
         # mod_channel = self.mod_channels[message.guild.id]
         # print(f'Guild ID is {message.guild.id}')
