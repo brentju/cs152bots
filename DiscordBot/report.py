@@ -58,7 +58,7 @@ class Report:
             message.content = remove_report_id(message.content)
             (print(message.content))
         else:
-            if self.state != self.REPORT_START:
+            if self.state != State.REPORT_START:
                 return ["Please remember to include the report ID in your report!"]
         if message.content == self.CANCEL_KEYWORD:
             self.state = State.REPORT_COMPLETE
