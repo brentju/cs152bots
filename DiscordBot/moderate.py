@@ -62,17 +62,17 @@ class Moderate:
             else:
                 self.decision = "remove"
             self.state = State.AWAITING_REASON
-            reply = f"You have chosen to {self.decision} this post."
-            reply += "Please provide a reason for why, as well as a reference to our TOS."
+            reply = f"You have chosen to {self.decision} this post. "
+            reply += "Please provide a reason for why, as well as a reference to our TOS. "
             return [reply]
         if self.state == State.AWAITING_REASON:
             self.reason = message.content
-            reply = "Thank you."
-            if self.decision == "not_remove":
+            reply = "Thank you. "
+            if self.decision == "not remove":
                 self.state = State.REPORT_COMPLETE
                 reply += "Your report is complete."
             else:
-                reply+= "Please provide the action you wish to take regarding the post and/or it's owner."
+                reply+= "Please provide the action you wish to take regarding the post and/or it's owner. "
                 self.state = State.AWAITING_ACTION
                 reply += """ Your choices are as follows:
                 1. Remove the post\n2. Shadow ban the user\n3. Prevent the user from posting for 24h\n4. Suspend the user for a week\n\
