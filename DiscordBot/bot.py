@@ -155,13 +155,13 @@ class ModBot(discord.Client):
 
         reference_report =  await message.channel.fetch_message(message.reference.message_id)
         reference_report_id = extract_report_id(reference_report.content)
-        reported_user, message, abuse_type, reporting_user = parse_report_details(reference_report.content)
+        reported_user, original_message, abuse_type, reporting_user = parse_report_details(reference_report.content)
         if message.author.id not in self.active_replies:
             self.active_replies[message.author.id] = {}
         if reference_report_id not in self.active_replies[message.author.id]:
             self.active_replies[message.author.id][reference_report_id] = Moderate(self,
                                                               reporting_user=reporting_user,
-                                                              initial_message=message,
+                                                              initial_message=original_message,
                                                               abuse_type=abuse_type,
                                                               reported_user=reported_user)
 
