@@ -112,7 +112,7 @@ class ModBot(discord.Client):
             full_report = self.reports[author_id].get_full_report()
             report_id = uuid.uuid4()
             report_summary = f"Full report for {message.author.display_name}:\n\
-            Reported User: {full_report['reported_user'].id} \n\
+            Reported User: {full_report['reported_user']} \n\
             Message: {full_report['message']}\n\
             Abuse Type: {full_report['abuse_type']}\n\
             Additional Info: {full_report['additional_info']}\n\
