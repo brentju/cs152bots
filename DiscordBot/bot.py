@@ -153,7 +153,7 @@ class ModBot(discord.Client):
         if author_id not in self.reports and not message.content.startswith(Moderate.START_KEYWORD):
             return
 
-        reference_report = message.referenced_message.content
+        reference_report = message.referenced_message?.content
         reference_report_id = extract_report_id(reference_report)
         reported_user, message, abuse_type, reporting_user = parse_report_details(reference_report)
         if message.author.id not in self.active_replies:
