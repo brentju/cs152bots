@@ -149,7 +149,12 @@ class ModBot(discord.Client):
         thread = message.channel
         starter_message = await thread.parent.fetch_message(thread.id)
         reference_report = starter_message
-        reported_user, original_message, abuse_type, reporting_user, reference_report_id = parse_report_details(reference_report.content)
+        details = parse_report_details(reference_report.content)
+        reported_user = details['reported_user']
+        original_message = details['original_message']
+        abuse_type = details['abuse_type']
+        reporting_user = details['reporting_user']
+        reference_report_id details['report_id']
         print(f"reported_user: {reported_user}")
         print(f"original_message: {original_message}")
         print(f"abuse_type: {abuse_type}")

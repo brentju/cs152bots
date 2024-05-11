@@ -1,27 +1,31 @@
 import re 
 def parse_report_details(message_content):
-    pattern = re.compile(
-        r"Reported User: (\d+)\n"
-        r"Message: (.+?)\n"
-        r"Abuse Type: (.+?)\n"
-        r"Reporting User: (\d+)\n"
-        r"REPORT ID: (\S+)",
-        re.DOTALL
-    )
-    match = pattern.search(message_content)
-    
-    if not match:
-        print("No match found")
-        return None, None, None, None, None 
+    details = {
+        "reported_user": None,
+        "message": None,
+        "abuse_type": None,
+        "additional_info": None,
+        "reporting_user": None,
+        "report_id": None
+    }
 
-    reported_user_id = match.group(1)
-    message = match.group(2)
-    abuse_type = match.group(3)
-    additional_info = match.group(4)
-    reporting_user_id = match.group(5)
-    report_id = match.group(6)
+    lines = message_content.split('\n')
+    for line in lines:
+        if line.startswith("Reported User:"):
+            details["reported_user"] = int(line.split("Reported User: ")[1])
+        elif line.startswith("Message:"):
+            details["message"] = line.split("Message: ")[1]
+        elif line.startswith("Abuse Type:"):
+            details["abuse_type"] = line.split("Abuse Type: ")[1]
+        elif line.startswith("Additional Info:"):
+            details["additional_info"] = line.split("Additional Info: ")[1]
+        elif line.startswith("Reporting User:"):
+            details["reporting_user"] = int(line.split("Reporting User: ")[1])
+        elif line.startswith("REPORT ID:"):
+            details["report_id"] = line.split("REPORT ID: ")[1]
 
-    return int(reported_user_id), message, abuse_type, int(reporting_user_id), report_id
+    return details
+
 
 
 
