@@ -125,7 +125,8 @@ class ModBot(discord.Client):
         # Only handle messages sent in the "group-#" channel
 
         if message.channel.name == f'group-{self.group_num}-mod':
-            print(message)
+            if message.reference:
+                print(message.reference)
             if (message.reference is not None and not message.is_system):
                 await self.handle_reply_message(message)
         else:
