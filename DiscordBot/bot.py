@@ -126,9 +126,8 @@ class ModBot(discord.Client):
 
         if message.channel.name == f'group-{self.group_num}-mod':
             if message.reference:
-                print(message.reference)
-            if (message.reference is not None and not message.is_system):
-                await self.handle_reply_message(message)
+                if (message.reference is not None):
+                    await self.handle_reply_message(message)
         else:
             return
         # # Forward the message to the mod channel
@@ -140,6 +139,7 @@ class ModBot(discord.Client):
         # await mod_channel.send(self.code_format(scores))
 
     async def handle_reply_message(self, message):
+        print(message.content)
         if message.content == Moderate.HELP_KEYWORD:
             reply =  "Use the `START` command to begin the moderation process.\n"
             reply += "Use the `CANCEL` command to cancel the moderation process.\n"
