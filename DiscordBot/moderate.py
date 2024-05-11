@@ -24,17 +24,18 @@ class Moderate:
     START_KEYWORD = "START"
     CANCEL_KEYWORD = "CANCEL"
     END_KEYWORD = "END"
+    HELP_KEYWORD = "HELP"
 
-    def __init__(self, client, channel, reporting_user, reported_user, initial_message):
+    def __init__(self, client, channel, reporting_user, reported_user, initial_message, abuse_type):
         self.state = State.REPORT_START
         self.client = client
-        self.channel = channel
         self.decision = None
         self.reason = None
         self.action = None
         self.perp_message = inital_message
         self.reporting_user = reporting_user
         self.reported_user = reported_user
+        self.abuse_type = abuse_type
     
     async def handle_message(self, message):
         '''
@@ -94,14 +95,6 @@ class Moderate:
     def report_complete(self):
         return self.state == State.REPORT_COMPLETE
     
-    def get_mod_report(self):
-        return {
-            "message": self.message,
-            "abuse_type": self.cur_abuse_type,
-            "reported_user": self.reported_user,
-            "additional_info": self.user_addl_info,
-        }
-
     async def notify_users(self):
         # Send notifications to reported and reporting users
         reported_message = f"Your message: '{self.initial_message.content}' was moderated. Action: {self.action}, Reason: {self.reason}."

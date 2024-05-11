@@ -42,8 +42,7 @@ class ModBot(discord.Client):
         self.group_num = None
         self.mod_channels = {} # Map from guild to the mod channel id for that guild
         self.reports = {} # Map from user IDs to the state of their report
-        self.active_threads = {} # Threads currently in moderation
-        self.queued_reports = {}
+        self.active_replies = {} # Threads currently in moderation
 
     async def on_ready(self):
         print(f'{self.user.name} has connected to Discord! It is these guilds:')
@@ -74,8 +73,8 @@ class ModBot(discord.Client):
         if message.author.id == self.user.id:
             return
 
-        if isinstance(message.channel, discord.Thread):
-            await self.handle_thread_message(message)
+        if (message.reference is not None and not message.is_system):
+            await self.handle_reply_message(message)
         elif message.guild:
             await self.handle_channel_message(message)
         else:
@@ -138,30 +137,40 @@ class ModBot(discord.Client):
         # scores = self.eval_text(message.content)
         # await mod_channel.send(self.code_format(scores))
 
-    async def handle_thread_message(self, message):
-        if not message.content.startswith(Moderate.START_KEYWORD):
+    async def handle_reply_message(self, message):
+        if message.content == Moderate.HELP_KEYWORD:
+            reply =  "Use the `START` command to begin the moderation process.\n"
+            reply += "Use the `CANCEL` command to cancel the moderation process.\n"
+            reply += "Use the `END` command to end the moderation process.\n"
+            await message.channel.send(reply)
             return
-        if message.author.id not in self.active_threads:
-            parent_message = await message.channel.parent.fetch_message(message_reference.message_id)
-            report_id, reporting_user_id = parse_report_details(parent_message)
-            report = self.reports[reporting_user_id]
-            self.active_threads[message.author.id] = Moderate(
-                client=self,
-                channel=message.channel,
-                reported_user=report.reported_user,
-                reporting_user=report.reporting_user,
-                initial_message=report.message
-            )
 
-        moderation = self.active_threads[message.author.id]
-        responses = await moderation.handle_message(message)
+        author_id = message.author.id
+        responses = []
 
-        for response in responses:
-            await message.channel.send(response)
+        if author_id not in self.reports and not message.content.startswith(Moderate.START_KEYWORD):
+            return
 
-        if moderation.state == State.REPORT_COMPLETE:
+        reference_report = message.referenced_message.content
+        reference_report_id = extract_report_id(reference_report)
+        reported_user, message, abuse_type, reporting_user = parse_report_details(reference_report)
+        if message.author.id not in self.active_replies:
+            self.active_replies[message.author.id] = {}
+        if reference_report_id not in self.active_replies[message.author.id]:
+            self.active_replies[message.author.id][reference_report_id] = Moderate(self,
+                                                              reporting_user=reporting_user,
+                                                              initial_message=message,
+                                                              abuse_type=abuse_type,
+                                                              reported_user=reported_user)
+
+        responses = await self.active_replies[message.author.id][reference_report_id].handle_message(message)
+        for r in responses:
+            await message.channel.send(r)
+
+        if self.active_replies[author_id][reference_report_id].report_complete():
             await moderation.notify_users()
-            del self.active_threads[message.author.id]
+            del self.active_replies[message.author.id][reference_report_id]
+
 
     def eval_text(self, message):
         ''''
