@@ -10,10 +10,9 @@ def parse_report_details(message_content):
     }
 
     lines = message_content.split('\n')
-    print(lines)
     for line in lines:
+        line = line.strip()
         if line.startswith("Reported User:"):
-            print(line.split("Reported User: "))
             details["reported_user"] = int(line.split("Reported User: ")[1])
         elif line.startswith("Message:"):
             details["message"] = line.split("Message: ")[1]
