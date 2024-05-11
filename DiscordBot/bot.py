@@ -154,7 +154,7 @@ class ModBot(discord.Client):
         original_message = details['original_message']
         abuse_type = details['abuse_type']
         reporting_user = details['reporting_user']
-        reference_report_id details['report_id']
+        reference_report_id = details['report_id']
         print(f"reported_user: {reported_user}")
         print(f"original_message: {original_message}")
         print(f"abuse_type: {abuse_type}")
