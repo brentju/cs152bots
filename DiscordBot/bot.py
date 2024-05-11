@@ -43,6 +43,7 @@ class ModBot(discord.Client):
         self.mod_channels = {} # Map from guild to the mod channel id for that guild
         self.reports = {} # Map from user IDs to the state of their report
         self.active_threads = {} # Threads currently in moderation
+        self.queued_reports = {}
 
     async def on_ready(self):
         print(f'{self.user.name} has connected to Discord! It is these guilds:')
@@ -97,28 +98,30 @@ class ModBot(discord.Client):
 
         # If we don't currently have an active report for this user, add one
         if author_id not in self.reports:
-            self.reports[author_id] = {}
-        report_id = extract_report_id(message.content)
-        if not report_id:
-            report_id = str(uuid.uuid4())
-            self.reports[author_id][report_id] = Report(self, report_id=report_id)
+            self.reports[author_id] = Report(self)
 
         # Let the report class handle this message; forward all the messages it returns to us
-        responses = await self.reports[author_id][report_id].handle_message(message)
+        responses = await self.reports[author_id].handle_message(message)
         for r in responses:
             await message.channel.send(r)
 
         # If the report is complete or cancelled, remove it from our map
-        if self.reports[author_id][report_id].report_complete():
+        if self.reports[author_id].report_complete():
             our_guild_id = 1211760623969370122
             our_mod_channel = self.mod_channels[our_guild_id]
-            full_report = self.reports[author_id][report_id].get_full_report()
+            full_report = self.reports[author_id].get_full_report()
+            report_id = uuid.uuid4()
             report_summary = f"Full report for {message.author.display_name}:\n\
             Reported User: {full_report['reported_user'].name} \n\
             Message: {full_report['message']}\n\
             Abuse Type: {full_report['abuse_type']}\n\
             Additional Info: {full_report['additional_info']}\n\
-            Reporting User: {author_id}"
+            Reporting User: {author_id}\n\
+            REPORT ID: {report_id}"
+            self.reports.pop(author_id)
+            if author_id not in self.queued_reports:
+                self.queued_reports[author_id] = {}
+            self.queued_reports[author_id][report_id] = report_summary
             await our_mod_channel.send(report_summary)
 
     async def handle_channel_message(self, message):
@@ -139,7 +142,7 @@ class ModBot(discord.Client):
         if not message.content.startswith(Moderate.START_KEYWORD):
             return
         if message.author.id not in self.active_threads:
-            parent_message = await message.channel.parent.fetch_message(message.reference.message_id)
+            parent_message = await message.channel.parent.fetch_message(message_reference.message_id)
             report_id, reporting_user_id = parse_report_details(parent_message)
             report = self.reports[reporting_user_id]
             self.active_threads[message.author.id] = Moderate(

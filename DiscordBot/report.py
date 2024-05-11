@@ -28,7 +28,7 @@ class Report:
     CANCEL_KEYWORD = "cancel"
     HELP_KEYWORD = "help"
 
-    def __init__(self, client, report_id):
+    def __init__(self, client):
         self.state = State.REPORT_START
         self.client = client
         self.message = None
@@ -44,7 +44,6 @@ class Report:
         self.reported_by = None
         self.user_addl_info = None
         self.guild_id = None
-        self.report_id = report_id
     
     async def handle_message(self, message):
         '''
@@ -52,14 +51,6 @@ class Report:
         prompts to offer at each of those states. You're welcome to change anything you want; this skeleton is just here to
         get you started and give you a model for working with Discord. 
         '''
-        report_id = extract_report_id(message.content)
-        print(message.content)
-        if report_id:
-            message.content = remove_report_id(message.content)
-            (print(message.content))
-        else:
-            if self.state != State.REPORT_START:
-                return ["Please remember to include the report ID in your report!"]
         if message.content == self.CANCEL_KEYWORD:
             self.state = State.REPORT_COMPLETE
             return ["Report cancelled."]
@@ -67,7 +58,6 @@ class Report:
         if self.state == State.REPORT_START:
             reply =  "Thank you for starting the reporting process. "
             reply += "Say `help` at any time for more information.\n\n"
-            reply += f"For all further steps of the reporting process, please preface your message with the following message: \n REPORT ID: {self.report_id}\n"
             reply += "Please copy paste the link to the message you want to report.\n"
             reply += "You can obtain this link by right-clicking the message and clicking `Copy Message Link`."
             self.state = State.AWAITING_MESSAGE
@@ -87,16 +77,16 @@ class Report:
                 return ["It seems this channel was deleted or never existed. Please try again or say `cancel` to cancel."]
             try:
                 message = await channel.fetch_message(int(m.group(3)))
+                self.message = message.content
             except discord.errors.NotFound:
                 return ["It seems this message was deleted or never existed. Please try again or say `cancel` to cancel."]
 
             # Here we've found the message - it's up to you to decide what to do next!
             self.state = State.MESSAGE_IDENTIFIED
-            self.reported_user = message.author
+            self.reported_user = message.author.id
             return ["I found this message:", "```" + message.author.name + ": " + message.content + "```", \
                     "Would you like to report the following as:", \
                     "1. NSFW", "2. Impersonation", "3. Hateful Content", "4. Copyright Infringement", "5. Other"]
-            self.message = message.content
         if self.state == State.MESSAGE_IDENTIFIED:
             # We are awaiting a reply to the above
             abuse_type = None
