@@ -17,3 +17,8 @@ def extract_report_id(message_content):
     if match:
         return match.group(1)
     return None
+
+def remove_report_id(message):
+    pattern = re.compile(r"Report ID: \S+")
+    cleaned_content = pattern.sub('', message_content).strip()
+    return cleaned_content

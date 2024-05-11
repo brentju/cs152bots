@@ -1,6 +1,7 @@
 from enum import Enum, auto
 import discord
 import re
+from util import remove_report_id
 
 class State(Enum):
     REPORT_START = auto()
@@ -51,7 +52,9 @@ class Report:
         prompts to offer at each of those states. You're welcome to change anything you want; this skeleton is just here to
         get you started and give you a model for working with Discord. 
         '''
-
+        report_id = extract_report_id(message.content)
+        if report_id:
+            message.content = remove_report_id(message.content)
         if message.content == self.CANCEL_KEYWORD:
             self.state = State.REPORT_COMPLETE
             return ["Report cancelled."]
