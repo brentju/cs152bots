@@ -107,7 +107,7 @@ class Moderate:
     
     async def notify_users(self):
         # Send notifications to reported and reporting users
-        reported_message = f"Your message: '{self.initial_message.content}' was moderated. Action: {self.action}, Reason: {self.reason}."
+        reported_message = f"Your message: '{self.perp_message.content}' was moderated. Action: {self.action}, Reason: {self.reason}."
         reporting_message = f"Your report regarding the message: '{self.perp_message.content}' was addressed. Action: {self.action}, Reason: {self.reason}. Thank you for reporting!"
         await self.reported_user.send(reported_message)
         await self.reporting_user.send(reporting_message)
