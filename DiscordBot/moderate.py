@@ -109,6 +109,8 @@ class Moderate:
         # Send notifications to reported and reporting users
         reported_message = f"Your message: '{self.perp_message}' was moderated. Action: {self.action}, Reason: {self.reason}."
         reporting_message = f"Your report regarding the message: '{self.perp_message}' was addressed. Action: {self.action}, Reason: {self.reason}. Thank you for reporting!"
-        await self.reported_user.send(reported_message)
-        await self.reporting_user.send(reporting_message)
+        reported_user = client.fetch_user(self.reported_user)
+        reporting_user = client.fetch_user(self.reporting_user)
+        await reported_user.send(reported_message)
+        await reporting_user.send(reporting_message)
 
