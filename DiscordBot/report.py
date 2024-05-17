@@ -7,14 +7,14 @@ class State(Enum):
     REPORT_START = auto()
     AWAITING_MESSAGE = auto()
     MESSAGE_IDENTIFIED = auto()
-    AWAITING_ABUSE_TYPE = auto()   
-     
+    AWAITING_ABUSE_TYPE = auto()
+
     # enums to track unified flow once specific abuse details provided
     AWAITING_ABUSE_SUBTYPE = auto()
     AWAITING_ADDL_INFO = auto()
     AWAITING_USER_BLOCK = auto()
     REPORT_COMPLETE = auto()
-    
+
 class AbuseType(Enum):
     # enums for tracking which flow to take, given type of abuse
     NSFW = auto()
@@ -44,17 +44,17 @@ class Report:
         self.reported_by = None
         self.user_addl_info = None
         self.guild_id = None
-    
+
     async def handle_message(self, message):
         '''
-        This function makes up the meat of the user-side reporting flow. It defines how we transition between states and what 
+        This function makes up the meat of the user-side reporting flow. It defines how we transition between states and what
         prompts to offer at each of those states. You're welcome to change anything you want; this skeleton is just here to
-        get you started and give you a model for working with Discord. 
+        get you started and give you a model for working with Discord.
         '''
         if message.content == self.CANCEL_KEYWORD:
             self.state = State.REPORT_COMPLETE
             return ["Report cancelled."]
-        
+
         if self.state == State.REPORT_START:
             reply =  "Thank you for starting the reporting process. "
             reply += "Say `help` at any time for more information.\n\n"
@@ -62,7 +62,7 @@ class Report:
             reply += "You can obtain this link by right-clicking the message and clicking `Copy Message Link`."
             self.state = State.AWAITING_MESSAGE
             return [reply]
-        
+
         if self.state == State.AWAITING_MESSAGE:
             # Parse out the three ID strings from the message link
             m = re.search('/(\d+)/(\d+)/(\d+)', message.content)
@@ -77,7 +77,7 @@ class Report:
                 return ["It seems this channel was deleted or never existed. Please try again or say `cancel` to cancel."]
             try:
                 message = await channel.fetch_message(int(m.group(3)))
-                self.message = message.content
+                self.message = message
             except discord.errors.NotFound:
                 return ["It seems this message was deleted or never existed. Please try again or say `cancel` to cancel."]
 
@@ -94,13 +94,13 @@ class Report:
             # attempt to parse out the type of abuse user specifies
             try:
                 msg_key = int(message.content)
-                if int(message.content) in self.abuse_types.keys(): 
+                if int(message.content) in self.abuse_types.keys():
                     abuse_type = self.abuse_types[int(message.content)]
             except ValueError:
                 pass
             if message.content.lower() in self.abuse_types.values():
                 abuse_type = message.content.lower()
-                
+
             if abuse_type:
                 self.cur_abuse_type = abuse_type
                 self.state = State.AWAITING_ABUSE_SUBTYPE
@@ -171,7 +171,7 @@ class Report:
 
     def report_complete(self):
         return self.state == State.REPORT_COMPLETE
-    
+
     def get_full_report(self):
         return {
             "message": self.message,
@@ -180,5 +180,5 @@ class Report:
             "additional_info": self.user_addl_info,
         }
 
-    
+
 

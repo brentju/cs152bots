@@ -35,7 +35,7 @@ if not discord_token:
 
 
 class ModBot(discord.Client):
-    def __init__(self): 
+    def __init__(self):
         intents = discord.Intents.default()
         intents.message_content = True
         super().__init__(command_prefix='.', intents=intents)
@@ -62,14 +62,14 @@ class ModBot(discord.Client):
             for channel in guild.text_channels:
                 if channel.name == f'group-{self.group_num}-mod':
                     self.mod_channels[guild.id] = channel
-        
+
 
     async def on_message(self, message):
         '''
-        This function is called whenever a message is sent in a channel that the bot can see (including DMs). 
-        Currently the bot is configured to only handle messages that are sent over DMs or in your group's "group-#" channel. 
+        This function is called whenever a message is sent in a channel that the bot can see (including DMs).
+        Currently the bot is configured to only handle messages that are sent over DMs or in your group's "group-#" channel.
         '''
-        # Ignore messages from the bot 
+        # Ignore messages from the bot
         if message.author.id == self.user.id:
             return
 
@@ -110,11 +110,15 @@ class ModBot(discord.Client):
             report_id = uuid.uuid4()
             report_summary = f"Full report for {message.author.display_name}:\n\
             Reported User: {full_report['reported_user']} \n\
-            Message: {full_report['message']}\n\
+            Message: {full_report['message'.content]}\n\
             Abuse Type: {full_report['abuse_type']}\n\
             Additional Info: {full_report['additional_info']}\n\
             Reporting User: {author_id}\n\
             REPORT ID: {report_id}"
+            if full_report['message'].attachments:
+                attachments = full_report['message'].attachments
+                for attachment in attachments:
+                    report_summary += f"Message included attachment: {attachment.url}\n"
             self.reports.pop(author_id)
             await our_mod_channel.send(report_summary)
 
@@ -182,17 +186,17 @@ class ModBot(discord.Client):
 
     def eval_text(self, message):
         ''''
-        TODO: Once you know how you want to evaluate messages in your channel, 
-        insert your code here! This will primarily be used in Milestone 3. 
+        TODO: Once you know how you want to evaluate messages in your channel,
+        insert your code here! This will primarily be used in Milestone 3.
         '''
         return message
 
-    
+
     def code_format(self, text):
         ''''
-        TODO: Once you know how you want to show that a message has been 
-        evaluated, insert your code here for formatting the string to be 
-        shown in the mod channel. 
+        TODO: Once you know how you want to show that a message has been
+        evaluated, insert your code here for formatting the string to be
+        shown in the mod channel.
         '''
         return "Evaluated: '" + text+ "'"
 
