@@ -8,6 +8,10 @@ import re
 import requests
 from report import Report
 import pdb
+from moderate import Moderate
+from util import parse_report_details, extract_report_id
+import uuid
+
 
 # Set up logging to the console
 logger = logging.getLogger('discord')
@@ -31,13 +35,14 @@ if not discord_token:
 
 
 class ModBot(discord.Client):
-    def __init__(self): 
+    def __init__(self):
         intents = discord.Intents.default()
         intents.message_content = True
         super().__init__(command_prefix='.', intents=intents)
         self.group_num = None
         self.mod_channels = {} # Map from guild to the mod channel id for that guild
         self.reports = {} # Map from user IDs to the state of their report
+        self.active_replies = {} # Threads currently in moderation
 
     async def on_ready(self):
         print(f'{self.user.name} has connected to Discord! It is these guilds:')
@@ -57,18 +62,17 @@ class ModBot(discord.Client):
             for channel in guild.text_channels:
                 if channel.name == f'group-{self.group_num}-mod':
                     self.mod_channels[guild.id] = channel
-        
+
 
     async def on_message(self, message):
         '''
-        This function is called whenever a message is sent in a channel that the bot can see (including DMs). 
-        Currently the bot is configured to only handle messages that are sent over DMs or in your group's "group-#" channel. 
+        This function is called whenever a message is sent in a channel that the bot can see (including DMs).
+        Currently the bot is configured to only handle messages that are sent over DMs or in your group's "group-#" channel.
         '''
-        # Ignore messages from the bot 
+        # Ignore messages from the bot
         if message.author.id == self.user.id:
             return
 
-        # Check if this message was sent in a server ("guild") or if it's a DM
         if message.guild:
             await self.handle_channel_message(message)
         else:
@@ -93,40 +97,106 @@ class ModBot(discord.Client):
         if author_id not in self.reports:
             self.reports[author_id] = Report(self)
 
-        # Let the report class handle this message; forward all the messages it returns to uss
+        # Let the report class handle this message; forward all the messages it returns to us
         responses = await self.reports[author_id].handle_message(message)
         for r in responses:
             await message.channel.send(r)
 
         # If the report is complete or cancelled, remove it from our map
         if self.reports[author_id].report_complete():
+            our_guild_id = 1211760623969370122
+            our_mod_channel = self.mod_channels[our_guild_id]
+            full_report = self.reports[author_id].get_full_report()
+            report_id = uuid.uuid4()
+            report_summary = f"Full report for {message.author.display_name}:\n\
+            Reported User: {full_report['reported_user']} \n\
+            Message: {full_report['message'].content}\n\
+            Abuse Type: {full_report['abuse_type']}\n\
+            Additional Info: {full_report['additional_info']}\n\
+            Reporting User: {author_id}\n\
+            REPORT ID: {report_id}"
+            if full_report['message'].attachments:
+                attachments = full_report['message'].attachments
+                for attachment in attachments:
+                    report_summary += f"Message included attachment: {attachment.url}\n"
             self.reports.pop(author_id)
+            await our_mod_channel.send(report_summary)
 
     async def handle_channel_message(self, message):
         # Only handle messages sent in the "group-#" channel
-        if not message.channel.name == f'group-{self.group_num}':
+        if isinstance(message.channel, discord.Thread) and message.channel.parent.name == f'group-{self.group_num}-mod':
+            await self.handle_reply_message(message)
+        else:
+            return
+        # # Forward the message to the mod channel
+        # mod_channel = self.mod_channels[message.guild.id]
+        # print(f'Guild ID is {message.guild.id}')
+        # print(f'Mod channel is {mod_channel}')
+        # await mod_channel.send(f'Forwarded message:\n{message.author.name}: "{message.content}"')
+        # scores = self.eval_text(message.content)
+        # await mod_channel.send(self.code_format(scores))
+
+    async def handle_reply_message(self, message):
+        if message.content == Moderate.HELP_KEYWORD:
+            reply =  "Use the `START` command to begin the moderation process.\n"
+            reply += "Use the `CANCEL` command to cancel the moderation process.\n"
+            reply += "Use the `END` command to end the moderation process.\n"
+            await message.channel.send(reply)
             return
 
-        # Forward the message to the mod channel
-        mod_channel = self.mod_channels[message.guild.id]
-        await mod_channel.send(f'Forwarded message:\n{message.author.name}: "{message.content}"')
-        scores = self.eval_text(message.content)
-        await mod_channel.send(self.code_format(scores))
+        author_id = message.author.id
+        responses = []
 
-    
+        if author_id not in self.active_replies and not message.content.startswith(Moderate.START_KEYWORD):
+            return
+
+        thread = message.channel
+        starter_message = await thread.parent.fetch_message(thread.id)
+        reference_report = starter_message
+        details = parse_report_details(reference_report.content)
+        reported_user = details['reported_user']
+        original_message = details['message']
+        abuse_type = details['abuse_type']
+        reporting_user = details['reporting_user']
+        reference_report_id = details['report_id']
+        print(f"reported_user: {reported_user}")
+        print(f"original_message: {original_message}")
+        print(f"abuse_type: {abuse_type}")
+        print(f"reporting_user: {reporting_user}")
+        if message.author.id not in self.active_replies:
+            self.active_replies[message.author.id] = {}
+        if reference_report_id not in self.active_replies[message.author.id]:
+            self.active_replies[message.author.id][reference_report_id] = Moderate(self,
+                                                              reporting_user=reporting_user,
+                                                              initial_message=original_message,
+                                                              abuse_type=abuse_type,
+                                                              reported_user=reported_user)
+        print(f"Author: {message.author}")
+        print(f"Active replies for this author are: {self.active_replies[message.author.id]}")
+        responses = await self.active_replies[message.author.id][reference_report_id].handle_message(message)
+        print(responses)
+        for r in responses:
+            await message.channel.send(r)
+
+        if self.active_replies[author_id][reference_report_id].report_complete():
+            moderation = self.active_replies[author_id][reference_report_id]
+            await moderation.notify_users()
+            del self.active_replies[message.author.id][reference_report_id]
+
+
     def eval_text(self, message):
         ''''
-        TODO: Once you know how you want to evaluate messages in your channel, 
-        insert your code here! This will primarily be used in Milestone 3. 
+        TODO: Once you know how you want to evaluate messages in your channel,
+        insert your code here! This will primarily be used in Milestone 3.
         '''
         return message
 
-    
+
     def code_format(self, text):
         ''''
-        TODO: Once you know how you want to show that a message has been 
-        evaluated, insert your code here for formatting the string to be 
-        shown in the mod channel. 
+        TODO: Once you know how you want to show that a message has been
+        evaluated, insert your code here for formatting the string to be
+        shown in the mod channel.
         '''
         return "Evaluated: '" + text+ "'"
 
