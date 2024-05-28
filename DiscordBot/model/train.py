@@ -6,6 +6,7 @@ from torch import nn, optim
 import certifi
 from tqdm import tqdm
 import torch.nn as nn
+from model import CNNModel
 
 def train_model(model, criterion, optimizer, num_epochs=10):
     for epoch in range(num_epochs):
@@ -15,9 +16,9 @@ def train_model(model, criterion, optimizer, num_epochs=10):
         # Each epoch has a training and validation phase
         for phase in ['train', 'test']:
             if phase == 'train':
-                model.train()  # Set model to training mode
+                model.train() 
             else:
-                model.eval()   # Set model to evaluate mode
+                model.eval() 
 
             running_loss = 0.0
             running_corrects = 0
@@ -53,14 +54,9 @@ def train_model(model, criterion, optimizer, num_epochs=10):
     return model
 
 if __name__ == '__main__':
-    # Set the SSL_CERT_FILE environment variable
-    os.environ['SSL_CERT_FILE'] = certifi.where()
-
-    # Define directories
     train_dir = './data/train'
     test_dir = './data/test'
 
-    # Define transformations for the training and testing sets
     data_transforms = {
         'train': transforms.Compose([
             transforms.RandomResizedCrop(224),
@@ -87,8 +83,6 @@ if __name__ == '__main__':
         'train': DataLoader(image_datasets['train'], batch_size=32, shuffle=True, num_workers=4),
         'test': DataLoader(image_datasets['test'], batch_size=32, shuffle=False, num_workers=4)
     }
-
-    # Get dataset sizes and class names
     dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'test']}
     class_names = image_datasets['train'].classes
 
@@ -97,27 +91,8 @@ if __name__ == '__main__':
     print(f"Training on: {device}")
     
     # For the sake of time, train a simple CNN
-    model = nn.Sequential(
-        nn.Conv2d(3, 16, (3,3), stride=1),
-        nn.BatchNorm2d(16),
-        nn.LeakyReLU(),
-        nn.MaxPool2d((2,2), stride=2),
-        nn.Conv2d(16, 32, (3,3), stride=1),
-        nn.BatchNorm2d(32),
-        nn.LeakyReLU(),
-        nn.MaxPool2d((2,2), stride=2),
-        nn.Flatten(),
-        nn.Linear(93312, 256),
-        nn.LeakyReLU(),
-        nn.Linear(256, 2)
-    )
-
-    # Load a pretrained ResNet model and modify the final layer
-    # weights = models.ResNet18_Weights.IMAGENET1K_V1
-    # model = models.resnet18(weights=weights)
-    # num_ftrs = model.fc.in_features
-    # model.fc = nn.Linear(num_ftrs, len(class_names))  # Adjust final layer for our number of classes
-
+    model = CNNModel()
+    
     # Move the model to the appropriate device
     model = model.to(device)
 
@@ -126,7 +101,7 @@ if __name__ == '__main__':
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
     # Train the model
-    model = train_model(model, criterion, optimizer, num_epochs=8)
+    model = train_model(model, criterion, optimizer, num_epochs=10)
 
     # Save the trained model
     torch.save(model.state_dict(), 'cnn_finetuned.pth')
