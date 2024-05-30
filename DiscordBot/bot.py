@@ -9,8 +9,14 @@ import requests
 from report import Report
 import pdb
 from moderate import Moderate
-from util import parse_report_details, extract_report_id
+from util import parse_report_details, extract_report_id, download_image
 import uuid
+from PIL import Image
+import torchvision
+import torch
+from torchvision import transforms
+from model.model import CNNModel
+from io import BytesIO
 
 
 # Set up logging to the console
@@ -21,17 +27,17 @@ handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(me
 logger.addHandler(handler)
 
 # There should be a file called 'tokens.json' inside the same folder as this file
-# token_path = 'tokens.json'
-# if not os.path.isfile(token_path):
-#     raise Exception(f"{token_path} not found!")
-# with open(token_path) as f:
-#     # If you get an error here, it means your token is formatted incorrectly. Did you put it in quotes?
-#     tokens = json.load(f)
-#     discord_token = tokens['discord']
+token_path = 'tokens.json'
+if not os.path.isfile(token_path):
+    raise Exception(f"{token_path} not found!")
+with open(token_path) as f:
+    # If you get an error here, it means your token is formatted incorrectly. Did you put it in quotes?
+    tokens = json.load(f)
+    discord_token = tokens['discord']
 
-discord_token = os.getenv('discord')
-if not discord_token:
-    raise Exception("Discord token not found in environment variables!")
+# discord_token = os.getenv('discord')
+# if not discord_token:
+#     raise Exception("Discord token not found in environment variables!")
 
 
 class ModBot(discord.Client):
@@ -43,6 +49,14 @@ class ModBot(discord.Client):
         self.mod_channels = {} # Map from guild to the mod channel id for that guild
         self.reports = {} # Map from user IDs to the state of their report
         self.active_replies = {} # Threads currently in moderation
+        self.model = CNNModel()
+        self.model.load_state_dict(torch.load("./model/cnn_finetuned.pth"))
+        self.transforms = transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ])
 
     async def on_ready(self):
         print(f'{self.user.name} has connected to Discord! It is these guilds:')
@@ -126,15 +140,11 @@ class ModBot(discord.Client):
         # Only handle messages sent in the "group-#" channel
         if isinstance(message.channel, discord.Thread) and message.channel.parent.name == f'group-{self.group_num}-mod':
             await self.handle_reply_message(message)
-        else:
-            return
-        # # Forward the message to the mod channel
-        # mod_channel = self.mod_channels[message.guild.id]
-        # print(f'Guild ID is {message.guild.id}')
-        # print(f'Mod channel is {mod_channel}')
-        # await mod_channel.send(f'Forwarded message:\n{message.author.name}: "{message.content}"')
-        # scores = self.eval_text(message.content)
-        # await mod_channel.send(self.code_format(scores))
+        elif message.channel.name == f'group-{self.group_num}':
+            # Forward the message to the mod channel
+            mod_channel = self.mod_channels[message.guild.id]
+            image_detected, scores = self.eval_text(message)
+            await mod_channel.send(self.code_format(image_detected, scores))
 
     async def handle_reply_message(self, message):
         if message.content == Moderate.HELP_KEYWORD:
@@ -189,16 +199,33 @@ class ModBot(discord.Client):
         TODO: Once you know how you want to evaluate messages in your channel,
         insert your code here! This will primarily be used in Milestone 3.
         '''
-        return message
+        if message.attachments:
+            print("attachment detected")
+            for attachment in message.attachments:
+                print(attachment.url)
+                response = requests.get(attachment.url)
+                if response.status_code == 200:
+                    image = Image.open(BytesIO(response.content))
+                    image_tensor = self.transforms(image)
+                    image_tensor = image_tensor.unsqueeze(0)
+                    output = self.model(image_tensor)
+                    softmax = torch.nn.Softmax()
+                    output = softmax(output[0])
+                    print(type(output[0]))
+                    return True, output.detach().numpy()[0]
+        return False, message.content
 
 
-    def code_format(self, text):
+    def code_format(self, image_detected, text):
         ''''
         TODO: Once you know how you want to show that a message has been
         evaluated, insert your code here for formatting the string to be
         shown in the mod channel.
         '''
-        return "Evaluated: '" + text+ "'"
+        if not image_detected:
+            return "Evaluated: '" + text+ "'"
+        score = f"{text * 100:.2f}%"
+        return f"Visual media detected: based on our analysis, this has a {score} chance of being AI generated."
 
 
 client = ModBot()

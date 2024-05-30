@@ -84,9 +84,14 @@ class Report:
             # Here we've found the message - it's up to you to decide what to do next!
             self.state = State.MESSAGE_IDENTIFIED
             self.reported_user = message.author.id
-            return ["I found this message:", "```" + message.author.name + ": " + message.content + "```", \
+            # Convert attachments to a string representation
+            attachments = "\n".join([attachment.url for attachment in message.attachments])
+            message_content = message.content + ("\nAttachments:\n" + attachments if attachments else "")
+
+            return ["I found this message:", f"```{message.author.name}: {message_content}```", \
                     "Would you like to report the following as:", \
                     "1. NSFW", "2. Impersonation", "3. Hateful Content", "4. Copyright Infringement", "5. Other"]
+            
         if self.state == State.MESSAGE_IDENTIFIED:
             # We are awaiting a reply to the above
             abuse_type = None
