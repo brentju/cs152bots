@@ -52,7 +52,7 @@ class ModBot(discord.Client):
         self.model = CNNModel()
         self.model.load_state_dict(torch.load("./model/cnn_finetuned.pth"))
         self.transforms = transforms.Compose([
-            transforms.Resize(256),
+            transforms.Resize((256, 256)),
             transforms.CenterCrop(224),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
@@ -206,6 +206,7 @@ class ModBot(discord.Client):
                 response = requests.get(attachment.url)
                 if response.status_code == 200:
                     image = Image.open(BytesIO(response.content))
+                    image = image.convert("RGB")
                     image_tensor = self.transforms(image)
                     image_tensor = image_tensor.unsqueeze(0)
                     output = self.model(image_tensor)
