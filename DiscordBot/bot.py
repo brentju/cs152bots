@@ -17,7 +17,8 @@ import torch
 from torchvision import transforms
 from model.model import CNNModel
 from io import BytesIO
-
+from google.cloud import vision
+import boto3
 
 # Set up logging to the console
 logger = logging.getLogger('discord')
@@ -57,6 +58,8 @@ class ModBot(discord.Client):
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ])
+        self.vision_client = vision.ImageAnnotatorClient()
+        self.rekognition_client = boto3.client('rekognition')
 
     async def on_ready(self):
         print(f'{self.user.name} has connected to Discord! It is these guilds:')
@@ -143,8 +146,11 @@ class ModBot(discord.Client):
         elif message.channel.name == f'group-{self.group_num}':
             # Forward the message to the mod channel
             mod_channel = self.mod_channels[message.guild.id]
-            image_detected, scores = self.eval_text(message)
-            await mod_channel.send(self.code_format(image_detected, scores))
+            image_detected, analysis = self.eval_text(message)
+            if not image_detected:
+                return
+            else:
+                await(self.message_actions(message, analysis))
 
     async def handle_reply_message(self, message):
         if message.content == Moderate.HELP_KEYWORD:
@@ -177,10 +183,10 @@ class ModBot(discord.Client):
             self.active_replies[message.author.id] = {}
         if reference_report_id not in self.active_replies[message.author.id]:
             self.active_replies[message.author.id][reference_report_id] = Moderate(self,
-                                                              reporting_user=reporting_user,
-                                                              initial_message=original_message,
-                                                              abuse_type=abuse_type,
-                                                              reported_user=reported_user)
+                                                                                   reporting_user=reporting_user,
+                                                                                   initial_message=original_message,
+                                                                                   abuse_type=abuse_type,
+                                                                                   reported_user=reported_user)
         print(f"Author: {message.author}")
         print(f"Active replies for this author are: {self.active_replies[message.author.id]}")
         responses = await self.active_replies[message.author.id][reference_report_id].handle_message(message)
@@ -209,24 +215,104 @@ class ModBot(discord.Client):
                     image = image.convert("RGB")
                     image_tensor = self.transforms(image)
                     image_tensor = image_tensor.unsqueeze(0)
+
+                    # Check if artificially generated
                     output = self.model(image_tensor)
                     softmax = torch.nn.Softmax()
                     output = softmax(output[0])
                     print(type(output[0]))
-                    return True, output.detach().numpy()[0]
-        return False, message.content
+
+                    # Safesearch results
+                    image_bytes = BytesIO(response.content).getvalue()
+                    safe_search_results = self.check_safe_search(image_bytes)
+
+                    # Rekognition results
+                    celebrities = self.check_celebs(image_bytes)
+
+                    print(celebrities)
+                    print(safe_search_results)
+
+                    analysis = {
+                        'artificially_generated_confidence': output.detach().numpy()[0],
+                        'violence': safe_search_results['violence'].name,
+                        'adult': safe_search_results['adult'].name,
+                        'spoof': safe_search_results['spoof'].name,
+                        'racy': safe_search_results['racy'].name,
+                        'celebrity_ids': [
+                            {
+                                'name': celeb['Name'],
+                                'confidence': celeb['MatchConfidence']
+                            } for celeb in celebrities
+                        ]
+                    }
+                    return True, analysis
+        return False, {}
+
+    def check_safe_search(self, image_bytes):
+        image = vision.Image(content=image_bytes)
+        response = self.vision_client.safe_search_detection(image=image)
+        safe_search = response.safe_search_annotation
+        return {
+            'violence': safe_search.violence,
+            'adult': safe_search.adult,
+            'spoof': safe_search.spoof,
+            'racy': safe_search.racy
+        }
+
+    def check_celebs(self, image_bytes):
+        response = self.rekognition_client.recognize_celebrities(
+            Image={'Bytes': image_bytes}
+        )
+        return response['CelebrityFaces']
+
+    async def message_actions(self, message, analysis):
+        ai_generated_threshold = 0.85
+        celebrity_confidence_threshold = 0.9
+        if analysis['artificially_generated_confidence'] > ai_generated_threshold:
+            if (analysis['violence'] == 'VERY_LIKELY' or analysis['adult'] == 'VERY_LIKELY' or
+                    analysis['racy'] == 'VERY_LIKELY'):
+                await self.send_to_moderators(message, analysis, "Potentially unsafe content detected.")
+                await message.delete()
+                await message.channel.send(f"Removed a potentially unsafe AI-generated media from {message.author.mention}.")
+            elif analysis['spoof'] == "VERY_LIKELY":
+                if analysis['celebrity_ids']:
+                    for celebrity in analysis['celebrity_ids']:
+                        if celebrity['confidence'] > celebrity_confidence_threshold:
+                            await self.send_to_moderators(message, analysis, "AI-generated spoof of a celebrity")
+                            await message.delete()
+                            await message.channel.send(f"Removed an AI-generated spoof of a celebrity from {message.author.mention}")
+                            break
+            else:
+                await message.channel.send(self.code_format(analysis['artificially_generated_confidence']))
+        elif (analysis['violence'] == 'VERY_LIKELY' or analysis['adult'] == 'VERY_LIKELY' or analysis['racy'] == 'VERY_LIKELY'):
+            await self.send_to_moderators(message, analysis, "Potentially unsafe real content")
+
+    async def send_to_moderators(self, message, analysis, description):
+        our_guild_id = 1211760623969370122125
+        our_mod_channel = self.mod_channels[our_guild_id]
+        embed = discord.Embed(title="Media Moderation Alert", description=reason, color=0xff0000)
+        embed.add_field(name="User", value=message.author.mention, inline=True)
+        embed.add_field(name="Channel", value=message.channel.mention, inline=True)
+        embed.add_field(name="Artificial Generated Score", value=results['artificial_generated_score'], inline=False)
+        embed.add_field(name="Violence", value=results['violence'], inline=True)
+        embed.add_field(name="Adult", value=results['adult'], inline=True)
+        embed.add_field(name="Racy", value=results['racy'], inline=True)
+        embed.add_field(name="Spoof", value=results['spoof'], inline=True)
+        if message.content:
+            embed.add_field(name="Original Message", value=message.content, inline=True)
+        for attachment in message.attachments:
+            embed.add_field(name="Included Atatchment", value=attachment.url, inline=False)
+        await our_mod_channel.send(embed=embed)
 
 
-    def code_format(self, image_detected, text):
+    def code_format(self, text):
         ''''
         TODO: Once you know how you want to show that a message has been
         evaluated, insert your code here for formatting the string to be
         shown in the mod channel.
         '''
-        if not image_detected:
-            return "Evaluated: '" + text+ "'"
         score = f"{text * 100:.2f}%"
-        return f"Visual media detected: based on our analysis, this has a {score} chance of being AI generated."
+        return f"GenAIBot: Careful, based on my analysis, this has a high chance of being AI generated."
 
 
 client = ModBot()
