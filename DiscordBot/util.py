@@ -20,13 +20,16 @@ def parse_report_details(message_content):
             if len(line.split("Message: ")) > 1:
                 details["message"] = line.split("Message: ")[1]
             else:
-                details["message"] = ""
+                details["message"] = "No message found"
         elif line.startswith("Abuse Type:"):
             details["abuse_type"] = line.split("Abuse Type: ")[1]
         elif line.startswith("Additional Info:"):
             details["additional_info"] = line.split("Additional Info: ")[1]
         elif line.startswith("Reporting User:"):
-            details["reporting_user"] = int(line.split("Reporting User: ")[1])
+            if line.split("Reporting User: ")[1] == "automatic":
+                details["reporting_user"] = "automatic"
+            else:
+                details["reporting_user"] = int(line.split("Reporting User: ")[1])
         elif line.startswith("REPORT ID:"):
             details["report_id"] = line.split("REPORT ID: ")[1]
 

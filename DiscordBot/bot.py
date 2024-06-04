@@ -288,22 +288,24 @@ class ModBot(discord.Client):
             await self.send_to_moderators(message, analysis, "Potentially unsafe real content")
 
     async def send_to_moderators(self, message, analysis, description):
-        our_guild_id = 1211760623969370122125
+        our_guild_id = 1211760623969370122
         our_mod_channel = self.mod_channels[our_guild_id]
-        embed = discord.Embed(title="Media Moderation Alert", description=reason, color=0xff0000)
-        embed.add_field(name="User", value=message.author.mention, inline=True)
-        embed.add_field(name="Channel", value=message.channel.mention, inline=True)
-        embed.add_field(name="Artificial Generated Score", value=results['artificial_generated_score'], inline=False)
-        embed.add_field(name="Violence", value=results['violence'], inline=True)
-        embed.add_field(name="Adult", value=results['adult'], inline=True)
-        embed.add_field(name="Racy", value=results['racy'], inline=True)
-        embed.add_field(name="Spoof", value=results['spoof'], inline=True)
-        if message.content:
-            embed.add_field(name="Original Message", value=message.content, inline=True)
-        for attachment in message.attachments:
-            embed.add_field(name="Included Atatchment", value=attachment.url, inline=False)
-        await our_mod_channel.send(embed=embed)
 
+        report_summary = f"Full report for {message.author.display_name}:\n"
+        report_summary += f"\tReported User: {message.author.id} \n"
+        report_summary += f"\tMessage: {message.content}\n"
+        report_summary += f"\tAbuse Type: {description}\n"
+        report_summary += f"\tAdditional Info: {analysis}\n"
+
+        report_summary += f"\tReporting User: automatic\n"
+        report_summary += f"\tREPORT ID: {uuid.uuid4()}"
+
+        if message.content:
+            attachments = message.attachments
+            for attachment in attachments:
+                report_summary += f"\tMessage included attachment: {attachment.url}\n"
+
+        await our_mod_channel.send(report_summary)
 
     def code_format(self, text):
         ''''
