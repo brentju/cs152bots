@@ -19,7 +19,9 @@ from model.model import CNNModel
 from io import BytesIO
 from google.cloud import vision
 import boto3
-
+import cv2
+from collections import Counter
+import numpy as np
 # Set up logging to the console
 logger = logging.getLogger('discord')
 logger.setLevel(logging.DEBUG)
@@ -205,47 +207,118 @@ class ModBot(discord.Client):
         TODO: Once you know how you want to evaluate messages in your channel,
         insert your code here! This will primarily be used in Milestone 3.
         '''
+        def process_image(image_content):
+            image = Image.open(BytesIO(image_content))
+            image = image.convert("RGB")
+            image_tensor = self.transforms(image)
+            image_tensor = image_tensor.unsqueeze(0)
+
+            # Check if artificially generated
+            output = self.model(image_tensor)
+            softmax = torch.nn.Softmax(dim=0)
+            output = softmax(output[0])
+
+            # Safesearch results
+            safe_search_results = self.check_safe_search(image_content)
+
+            # Rekognition results
+            celebrities = self.check_celebs(image_content)
+
+            analysis = {
+                'artificially_generated_confidence': output.detach().numpy()[0],
+                'violence': safe_search_results['violence'].name,
+                'adult': safe_search_results['adult'].name,
+                'spoof': safe_search_results['spoof'].name,
+                'racy': safe_search_results['racy'].name,
+                'celebrity_ids': [
+                    {
+                        'name': celeb['Name'],
+                        'confidence': celeb['MatchConfidence']
+
+                    } for celeb in celebrities
+
+                ]
+
+            }
+            return analysis
+
+        def process_video(video_content):
+            video_temp_path = "temp_video.mp4"
+            with open(video_temp_path, "wb") as video_file:
+                video_file.write(video_content)
+
+                cap = cv2.VideoCapture(video_temp_path)
+                frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                frame_step = max(frame_count // 10, 1)  # Process up to 10 frames
+
+                artificial_confidences = []
+                violence_list = []
+                adult_list = []
+                spoof_list = []
+                racy_list = []
+                celeb_dict = {}
+
+                for frame_idx in range(0, frame_count, frame_step):
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+                    ret, frame = cap.read()
+                    if not ret:
+                        break
+                    # Convert frame to bytes
+                    is_success, buffer = cv2.imencode(".jpg", frame)
+                    frame_bytes = BytesIO(buffer).getvalue()
+                    frame_analysis = process_image(frame_bytes)
+
+                    artificial_confidences.append(frame_analysis['artificially_generated_confidence'])
+                    violence_list.append(frame_analysis['violence'])
+                    adult_list.append(frame_analysis['adult'])
+                    spoof_list.append(frame_analysis['spoof'])
+                    racy_list.append(frame_analysis['racy'])
+
+                    for celeb in frame_analysis['celebrity_ids']:
+                        name = celeb['name']
+                        confidence = celeb['confidence']
+                        if name not in celeb_dict:
+                            celeb_dict[name] = []
+                            celeb_dict[name].append(confidence)
+
+                cap.release()
+
+                            # Aggregate results
+                final_analysis = {
+                    'artificially_generated_confidence':
+                    np.mean(artificial_confidences),
+                    'violence': Counter(violence_list).most_common(1)[0][0],
+                    'adult': Counter(adult_list).most_common(1)[0][0],
+                    'spoof': Counter(spoof_list).most_common(1)[0][0],
+                    'racy': Counter(racy_list).most_common(1)[0][0],
+                    'celebrity_ids': [
+                        {
+                            'name': name,
+                            'confidence': np.mean(confidences)
+                        } for name, confidences in celeb_dict.items()
+
+                    ]
+
+                }
+                return final_analysis
+
         if message.attachments:
             print("attachment detected")
             for attachment in message.attachments:
                 print(attachment.url)
                 response = requests.get(attachment.url)
                 if response.status_code == 200:
-                    image = Image.open(BytesIO(response.content))
-                    image = image.convert("RGB")
-                    image_tensor = self.transforms(image)
-                    image_tensor = image_tensor.unsqueeze(0)
-
-                    # Check if artificially generated
-                    output = self.model(image_tensor)
-                    softmax = torch.nn.Softmax()
-                    output = softmax(output[0])
-                    print(type(output[0]))
-
-                    # Safesearch results
-                    image_bytes = BytesIO(response.content).getvalue()
-                    safe_search_results = self.check_safe_search(image_bytes)
-
-                    # Rekognition results
-                    celebrities = self.check_celebs(image_bytes)
-
-                    print(celebrities)
-                    print(safe_search_results)
-
-                    analysis = {
-                        'artificially_generated_confidence': output.detach().numpy()[0],
-                        'violence': safe_search_results['violence'].name,
-                        'adult': safe_search_results['adult'].name,
-                        'spoof': safe_search_results['spoof'].name,
-                        'racy': safe_search_results['racy'].name,
-                        'celebrity_ids': [
-                            {
-                                'name': celeb['Name'],
-                                'confidence': celeb['MatchConfidence']
-                            } for celeb in celebrities
-                        ]
-                    }
-                    return True, analysis
+                    content_type = response.headers['Content-Type']
+                    if 'image' in content_type:
+                        image_content = response.content
+                        analysis = process_image(image_content)
+                        print(analysis)
+                        return True, analysis
+                    elif 'video' in content_type:
+                        video_content = response.content
+                        analysis = process_video(video_content)
+                        print(analysis)
+                        return True, analysis
         return False, {}
 
     def check_safe_search(self, image_bytes):
