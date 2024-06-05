@@ -341,17 +341,21 @@ class ModBot(discord.Client):
     async def message_actions(self, message, analysis):
         ai_generated_threshold = 0.85
         celebrity_confidence_threshold = 0.9
+        urls = []
+        if message.attachments:
+            for attachment in message.attachments:
+                urls.append(attachment.url)
         if analysis['artificially_generated_confidence'] > ai_generated_threshold:
             if (analysis['violence'] == 'VERY_LIKELY' or analysis['adult'] == 'VERY_LIKELY' or
                     analysis['racy'] == 'VERY_LIKELY'):
-                await self.send_to_moderators(message, analysis, "Potentially unsafe content detected.")
+                await self.send_to_moderators(message, analysis, "Potentially unsafe content detected.", urls)
                 await message.delete()
                 await message.channel.send(f"Removed a potentially unsafe AI-generated media from {message.author.mention}.")
             elif analysis['spoof'] == "VERY_LIKELY":
                 if analysis['celebrity_ids']:
                     for celebrity in analysis['celebrity_ids']:
                         if celebrity['confidence'] > celebrity_confidence_threshold:
-                            await self.send_to_moderators(message, analysis, "AI-generated spoof of a celebrity")
+                            await self.send_to_moderators(message, analysis, "AI-generated spoof of a celebrity", urls)
                             await message.delete()
                             await message.channel.send(f"Removed an AI-generated spoof of a celebrity from {message.author.mention}")
                             break
@@ -360,10 +364,9 @@ class ModBot(discord.Client):
         elif (analysis['violence'] == 'VERY_LIKELY' or analysis['adult'] == 'VERY_LIKELY' or analysis['racy'] == 'VERY_LIKELY'):
             await self.send_to_moderators(message, analysis, "Potentially unsafe real content")
 
-    async def send_to_moderators(self, message, analysis, description):
+    async def send_to_moderators(self, message, analysis, description, urls):
         our_guild_id = 1211760623969370122
         our_mod_channel = self.mod_channels[our_guild_id]
-
         report_summary = f"Full report for {message.author.display_name}:\n"
         report_summary += f"\tReported User: {message.author.id} \n"
         report_summary += f"\tMessage: {message.content}\n"
@@ -373,10 +376,8 @@ class ModBot(discord.Client):
         report_summary += f"\tReporting User: automatic\n"
         report_summary += f"\tREPORT ID: {uuid.uuid4()}"
 
-        if message.content:
-            attachments = message.attachments
-            for attachment in attachments:
-                report_summary += f"\tMessage included attachment: {attachment.url}\n"
+        for url in urls:
+            report_summary += f"\tMessage included attachment: {url}\n"
 
         await our_mod_channel.send(report_summary)
 
